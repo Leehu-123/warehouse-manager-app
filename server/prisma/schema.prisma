@@ -1,0 +1,534 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model User {
+  id           Int      @id @default(autoincrement())
+  username     String   @unique
+  passwordHash String
+  fullName     String
+  role         String   // admin, thukho, ketoan, kinhdoanh, giacong
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relations
+  stockMovements      StockMovement[]
+  goodsReceiptsCreated  GoodsReceipt[]  @relation("ReceiptCreatedBy")
+  goodsReceiptsReceived GoodsReceipt[]  @relation("ReceiptReceivedBy")
+  goodsReceiptsApproved GoodsReceipt[]  @relation("ReceiptApprovedBy")
+  goodsIssuesCreated    GoodsIssue[]    @relation("IssueCreatedBy")
+  goodsIssuesApproved   GoodsIssue[]    @relation("IssueApprovedBy")
+  processingOrdersCreated  ProcessingOrder[] @relation("ProcessingCreatedBy")
+  processingOrdersApproved ProcessingOrder[] @relation("ProcessingApprovedBy")
+  damageReportsReported DamageReport[]  @relation("DamageReportedBy")
+  damageReportsApproved DamageReport[]  @relation("DamageApprovedBy")
+  stocktakesCreated     Stocktake[]     @relation("StocktakeCreatedBy")
+  stocktakesApproved    Stocktake[]     @relation("StocktakeApprovedBy")
+  adjustmentsCreated    StockAdjustment[] @relation("AdjustmentCreatedBy")
+  adjustmentsApproved   StockAdjustment[] @relation("AdjustmentApprovedBy")
+  auditLogs             AuditLog[]
+  attachments           Attachment[]
+
+  @@index([role])
+  @@index([active])
+  @@map("users")
+}
+
+model Supplier {
+  id        Int      @id @default(autoincrement())
+  code      String   @unique
+  name      String
+  phone     String?
+  address   String?
+  email     String?
+  note      String?
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  items         Item[]
+  goodsReceipts GoodsReceipt[]
+
+  @@index([active])
+  @@map("suppliers")
+}
+
+model Customer {
+  id          Int      @id @default(autoincrement())
+  code        String   @unique
+  name        String
+  phone       String?
+  address     String?
+  email       String?
+  projectName String?
+  note        String?
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  goodsIssues       GoodsIssue[]
+  processingOrders  ProcessingOrder[]
+  processingOutputs ProcessingOutput[]
+
+  @@index([active])
+  @@map("customers")
+}
+
+model Item {
+  id           Int      @id @default(autoincrement())
+  code         String   @unique
+  name         String
+  glassType    String   // kinh_thuong, kinh_cuong_luc, kinh_dan, kinh_hop, kinh_phan_quang, kinh_mau, kinh_low_e, khac
+  thickness    Float
+  color        String
+  standardSize String   // e.g. "2440x3660"
+  lengthMm     Float
+  widthMm      Float
+  areaM2       Float    // computed: lengthMm * widthMm / 1000000
+  unit         String   // tam, m2, kien, bo
+  unitPrice    Float    @default(0)
+  minStock     Int      @default(0)
+  supplierId   Int?
+  note         String?
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  supplier          Supplier?          @relation(fields: [supplierId], references: [id])
+  inventory         Inventory[]
+  stockMovements    StockMovement[]
+  goodsReceiptLines GoodsReceiptLine[]
+  goodsIssueLines   GoodsIssueLine[]
+  processingInputs  ProcessingInput[]
+  processingWastes  ProcessingWaste[]
+  damageReports     DamageReport[]
+  stocktakeLines    StocktakeLine[]
+  adjustmentLines   StockAdjustmentLine[]
+
+  @@index([glassType])
+  @@index([thickness])
+  @@index([color])
+  @@index([supplierId])
+  @@index([active])
+  @@map("items")
+}
+
+model Location {
+  id          Int      @id @default(autoincrement())
+  code        String   @unique
+  name        String
+  zone        String   // A-F
+  description String?
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  inventory           Inventory[]
+  stockMovementsFrom  StockMovement[]    @relation("MovementFromLocation")
+  stockMovementsTo    StockMovement[]    @relation("MovementToLocation")
+  goodsReceiptLines   GoodsReceiptLine[]
+  goodsIssueLines     GoodsIssueLine[]
+  processingInputs    ProcessingInput[]
+  processingOutputs   ProcessingOutput[]
+  damageReports       DamageReport[]
+  stocktakeLines      StocktakeLine[]
+  adjustmentLines     StockAdjustmentLine[]
+
+  @@index([zone])
+  @@index([active])
+  @@map("locations")
+}
+
+model Inventory {
+  id         Int      @id @default(autoincrement())
+  itemId     Int
+  locationId Int
+  quantity   Int      @default(0)
+  status     String   // tot, cho_kiem, cho_xuat, cho_gia_cong, dang_gia_cong, thanh_pham, loi, vo, xuoc, me, cho_xu_ly
+  batchNo    String?
+  orderRef   String?
+  note       String?
+  updatedAt  DateTime @updatedAt
+
+  item     Item     @relation(fields: [itemId], references: [id])
+  location Location @relation(fields: [locationId], references: [id])
+
+  @@unique([itemId, locationId, status])
+  @@index([itemId])
+  @@index([locationId])
+  @@index([status])
+  @@map("inventory")
+}
+
+model StockMovement {
+  id             Int      @id @default(autoincrement())
+  type           String   // nhap, xuat, dieu_chinh, gia_cong_xuat, gia_cong_nhap, chuyen_vi_tri, huy
+  refType        String   // goods_receipt, goods_issue, processing_order, damage_report, stock_adjustment, stocktake
+  refId          Int
+  itemId         Int
+  fromLocationId Int?
+  toLocationId   Int?
+  quantity       Int
+  statusBefore   String?
+  statusAfter    String?
+  note           String?
+  createdBy      Int
+  createdAt      DateTime @default(now())
+
+  item         Item      @relation(fields: [itemId], references: [id])
+  fromLocation Location? @relation("MovementFromLocation", fields: [fromLocationId], references: [id])
+  toLocation   Location? @relation("MovementToLocation", fields: [toLocationId], references: [id])
+  user         User      @relation(fields: [createdBy], references: [id])
+
+  @@index([type])
+  @@index([refType, refId])
+  @@index([itemId])
+  @@index([createdBy])
+  @@index([createdAt])
+  @@map("stock_movements")
+}
+
+model GoodsReceipt {
+  id          Int       @id @default(autoincrement())
+  code        String    @unique
+  date        DateTime
+  supplierId  Int?
+  deliveredBy String?
+  vehicleNo   String?
+  receivedBy  Int?
+  documentNo  String?
+  status      String    // nhap, cho_duyet, da_duyet, da_nhap_kho, huy
+  note        String?
+  createdBy   Int
+  approvedBy  Int?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  supplier     Supplier?         @relation(fields: [supplierId], references: [id])
+  receivedUser User?             @relation("ReceiptReceivedBy", fields: [receivedBy], references: [id])
+  createdUser  User              @relation("ReceiptCreatedBy", fields: [createdBy], references: [id])
+  approvedUser User?             @relation("ReceiptApprovedBy", fields: [approvedBy], references: [id])
+  lines        GoodsReceiptLine[]
+
+  @@index([status])
+  @@index([supplierId])
+  @@index([date])
+  @@index([createdBy])
+  @@map("goods_receipts")
+}
+
+model GoodsReceiptLine {
+  id         Int    @id @default(autoincrement())
+  receiptId  Int
+  itemId     Int
+  locationId Int
+  quantity   Int
+  condition  String // tot, cho_kiem, xuoc, me, vo, khac
+  note       String?
+
+  receipt  GoodsReceipt @relation(fields: [receiptId], references: [id], onDelete: Cascade)
+  item     Item         @relation(fields: [itemId], references: [id])
+  location Location     @relation(fields: [locationId], references: [id])
+
+  @@index([receiptId])
+  @@index([itemId])
+  @@map("goods_receipt_lines")
+}
+
+model GoodsIssue {
+  id           Int       @id @default(autoincrement())
+  code         String    @unique
+  date         DateTime
+  issueType    String    // xuat_ban, xuat_noi_bo, xuat_gia_cong, xuat_huy
+  customerId   Int?
+  projectName  String?
+  requestedBy  String?
+  receiverName String?
+  orderRef     String?
+  vehicleNo    String?
+  status       String    // nhap, cho_duyet, da_duyet, da_xuat_kho, huy
+  note         String?
+  createdBy    Int
+  approvedBy   Int?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  customer     Customer?        @relation(fields: [customerId], references: [id])
+  createdUser  User             @relation("IssueCreatedBy", fields: [createdBy], references: [id])
+  approvedUser User?            @relation("IssueApprovedBy", fields: [approvedBy], references: [id])
+  lines        GoodsIssueLine[]
+
+  @@index([status])
+  @@index([issueType])
+  @@index([customerId])
+  @@index([date])
+  @@index([createdBy])
+  @@map("goods_issues")
+}
+
+model GoodsIssueLine {
+  id           Int    @id @default(autoincrement())
+  issueId      Int
+  itemId       Int
+  locationId   Int
+  requestedQty Int
+  actualQty    Int    @default(0)
+  condition    String?
+  note         String?
+
+  issue    GoodsIssue @relation(fields: [issueId], references: [id], onDelete: Cascade)
+  item     Item       @relation(fields: [itemId], references: [id])
+  location Location   @relation(fields: [locationId], references: [id])
+
+  @@index([issueId])
+  @@index([itemId])
+  @@map("goods_issue_lines")
+}
+
+model ProcessingOrder {
+  id          Int       @id @default(autoincrement())
+  code        String    @unique
+  date        DateTime
+  customerId  Int?
+  projectName String?
+  requestedBy String?
+  assignedTo  String?
+  dueDate     DateTime?
+  processType String    // cat, mai, khoan, cuong_luc, dan, hop, khac
+  status      String    // nhap, cho_duyet, cho_vat_tu, dang_gia_cong, hoan_thanh, co_loi, huy
+  note        String?
+  createdBy   Int
+  approvedBy  Int?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  customer     Customer?          @relation(fields: [customerId], references: [id])
+  createdUser  User               @relation("ProcessingCreatedBy", fields: [createdBy], references: [id])
+  approvedUser User?              @relation("ProcessingApprovedBy", fields: [approvedBy], references: [id])
+  inputs       ProcessingInput[]
+  outputs      ProcessingOutput[]
+  wastes       ProcessingWaste[]
+
+  @@index([status])
+  @@index([processType])
+  @@index([customerId])
+  @@index([date])
+  @@index([createdBy])
+  @@map("processing_orders")
+}
+
+model ProcessingInput {
+  id                Int    @id @default(autoincrement())
+  processingOrderId Int
+  itemId            Int
+  locationId        Int
+  quantity          Int
+  areaM2            Float?
+  note              String?
+
+  processingOrder ProcessingOrder @relation(fields: [processingOrderId], references: [id], onDelete: Cascade)
+  item            Item            @relation(fields: [itemId], references: [id])
+  location        Location        @relation(fields: [locationId], references: [id])
+
+  @@index([processingOrderId])
+  @@index([itemId])
+  @@map("processing_inputs")
+}
+
+model ProcessingOutput {
+  id                Int      @id @default(autoincrement())
+  processingOrderId Int
+  itemCode          String?
+  itemName          String
+  lengthMm          Float?
+  widthMm           Float?
+  thickness         Float?
+  quantity          Int
+  areaM2            Float?
+  locationId        Int?
+  customerId        Int?
+  projectName       String?
+  note              String?
+
+  processingOrder ProcessingOrder @relation(fields: [processingOrderId], references: [id], onDelete: Cascade)
+  location        Location?       @relation(fields: [locationId], references: [id])
+  customer        Customer?       @relation(fields: [customerId], references: [id])
+
+  @@index([processingOrderId])
+  @@map("processing_outputs")
+}
+
+model ProcessingWaste {
+  id                Int      @id @default(autoincrement())
+  processingOrderId Int
+  wasteType         String   // cat_quy_cach, vo_gia_cong, xuoc_me, sai_quy_cach, loi_vat_tu, loi_thao_tac, khac
+  itemId            Int?
+  quantity          Int?
+  areaM2            Float?
+  reason            String?
+  reusable          Boolean  @default(false)
+  note              String?
+
+  processingOrder ProcessingOrder @relation(fields: [processingOrderId], references: [id], onDelete: Cascade)
+  item            Item?           @relation(fields: [itemId], references: [id])
+
+  @@index([processingOrderId])
+  @@map("processing_wastes")
+}
+
+model DamageReport {
+  id           Int       @id @default(autoincrement())
+  code         String    @unique
+  date         DateTime
+  reportedBy   Int
+  itemId       Int
+  locationId   Int
+  quantity     Int
+  damageType   String    // vo, xuoc, me, sai_quy_cach, loi_gia_cong, loi_van_chuyen, loi_nha_cung_cap, khac
+  reason       String?
+  imagePath    String?
+  handlingPlan String    // cho_xu_ly, ban_thanh_ly, tra_ncc, huy, dung_lai, chuyen_gia_cong
+  status       String    // cho_xu_ly, da_xu_ly, huy
+  approvedBy   Int?
+  note         String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  reporter     User      @relation("DamageReportedBy", fields: [reportedBy], references: [id])
+  approver     User?     @relation("DamageApprovedBy", fields: [approvedBy], references: [id])
+  item         Item      @relation(fields: [itemId], references: [id])
+  location     Location  @relation(fields: [locationId], references: [id])
+
+  @@index([status])
+  @@index([damageType])
+  @@index([itemId])
+  @@index([reportedBy])
+  @@index([date])
+  @@map("damage_reports")
+}
+
+model Stocktake {
+  id         Int       @id @default(autoincrement())
+  code       String    @unique
+  date       DateTime
+  zone       String?
+  status     String    // dang_kiem, cho_doi_chieu, hoan_thanh, huy
+  note       String?
+  createdBy  Int
+  approvedBy Int?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  createdUser  User            @relation("StocktakeCreatedBy", fields: [createdBy], references: [id])
+  approvedUser User?           @relation("StocktakeApprovedBy", fields: [approvedBy], references: [id])
+  lines        StocktakeLine[]
+
+  @@index([status])
+  @@index([date])
+  @@index([createdBy])
+  @@map("stocktakes")
+}
+
+model StocktakeLine {
+  id          Int    @id @default(autoincrement())
+  stocktakeId Int
+  itemId      Int
+  locationId  Int
+  systemQty   Int
+  actualQty   Int
+  difference  Int
+  reason      String?
+  proposal    String?
+  note        String?
+
+  stocktake Stocktake @relation(fields: [stocktakeId], references: [id], onDelete: Cascade)
+  item      Item      @relation(fields: [itemId], references: [id])
+  location  Location  @relation(fields: [locationId], references: [id])
+
+  @@index([stocktakeId])
+  @@index([itemId])
+  @@map("stocktake_lines")
+}
+
+model StockAdjustment {
+  id         Int       @id @default(autoincrement())
+  code       String    @unique
+  date       DateTime
+  reason     String    // sai_nhap_lieu, kiem_ke, hang_vo_huy, chuyen_vi_tri, khac
+  status     String    // nhap, cho_duyet, da_duyet, huy
+  note       String?
+  createdBy  Int
+  approvedBy Int?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  createdUser  User                  @relation("AdjustmentCreatedBy", fields: [createdBy], references: [id])
+  approvedUser User?                 @relation("AdjustmentApprovedBy", fields: [approvedBy], references: [id])
+  lines        StockAdjustmentLine[]
+
+  @@index([status])
+  @@index([reason])
+  @@index([date])
+  @@index([createdBy])
+  @@map("stock_adjustments")
+}
+
+model StockAdjustmentLine {
+  id           Int    @id @default(autoincrement())
+  adjustmentId Int
+  itemId       Int
+  locationId   Int
+  qtyBefore    Int
+  qtyAfter     Int
+  difference   Int
+  note         String?
+
+  adjustment StockAdjustment @relation(fields: [adjustmentId], references: [id], onDelete: Cascade)
+  item       Item            @relation(fields: [itemId], references: [id])
+  location   Location        @relation(fields: [locationId], references: [id])
+
+  @@index([adjustmentId])
+  @@index([itemId])
+  @@map("stock_adjustment_lines")
+}
+
+model AuditLog {
+  id         Int      @id @default(autoincrement())
+  userId     Int
+  action     String
+  entityType String
+  entityId   Int
+  changes    String?  // JSON string of before/after
+  ipAddress  String?
+  createdAt  DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([entityType])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
+
+model Attachment {
+  id         Int      @id @default(autoincrement())
+  entityType String
+  entityId   Int
+  fileName   String
+  filePath   String
+  mimeType   String?
+  uploadedBy Int
+  createdAt  DateTime @default(now())
+
+  uploader User @relation(fields: [uploadedBy], references: [id])
+
+  @@index([entityType, entityId])
+  @@index([uploadedBy])
+  @@map("attachments")
+}

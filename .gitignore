@@ -1,0 +1,16 @@
+node_modules/
+dist/
+.env
+*.db
+*.db-journal
+uploads/
+.DS_Store
+Thumbs.db
+
+deploy*.js
+fix_nginx.js
+setup_vps_backup.js
+test_rclone.js
+set_cron.js
+*.tar.gz
+*.zip

@@ -1,0 +1,27 @@
+
+server {
+    listen 8001;
+    server_name warehouse.ldhuy.name.vn;
+
+    root /var/www/dafa-warehouse-2/client/dist;
+    index index.html;
+
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+
+    location /api/ {
+        proxy_pass http://localhost:3002/api/;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_cache_bypass $http_upgrade;
+    }
+
+    location /uploads/ {
+        alias /var/www/dafa-warehouse-2/server/uploads/;
+        access_log off;
+        expires max;
+    }
+}
