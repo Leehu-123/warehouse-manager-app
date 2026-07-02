@@ -115,6 +115,149 @@ function normalizeResponse(url: string, payload: any) {
   return response;
 }
 
+function normalizeRequestBody(url: string, body?: BodyInit | null): BodyInit | null | undefined {
+  if (typeof body !== 'string') return body;
+
+  try {
+    const payload = JSON.parse(body);
+    if (!payload || typeof payload !== 'object' || Array.isArray(payload)) return body;
+
+    const normalized: any = { ...payload };
+
+    // Strip server-only fields that should never be sent in POST/PUT requests
+    const serverOnlyFields = ['id', 'createdAt', 'updatedAt', 'deletedAt', 'creator', 'approver',
+      'createdBy', 'approvedBy', 'createdUser', 'supplier', 'customer', 'item', 'location',
+      'reporter', 'approverUser', 'creatorUser', 'companyId'];
+    serverOnlyFields.forEach(field => delete normalized[field]);
+
+    // Core API uses isActive while the legacy Warehouse forms use active.
+    if ('active' in normalized && !('isActive' in normalized)) {
+      normalized.isActive = normalized.active;
+    }
+    delete normalized.active;
+
+    // Core API auto-generates supplier codes; sending code fails whitelist validation.
+    if (url.startsWith('/suppliers') && !url.includes('/suppliers/')) {
+      delete normalized.code;
+    }
+
+    // Map Item fields to Product fields
+    if (url.startsWith('/items') || url.startsWith('/products')) {
+      if ('unitPrice' in normalized) {
+        normalized.salePrice = Number(normalized.unitPrice) || 0;
+        if (!('costPrice' in normalized)) {
+          normalized.costPrice = 0;
+        }
+        delete normalized.unitPrice;
+      }
+      if ('size' in normalized && !('standardSize' in normalized)) {
+        normalized.standardSize = normalized.size;
+      }
+      delete normalized.size;
+
+      // note → description mapping (Core API Product uses description, not note)
+      if ('note' in normalized && !('description' in normalized)) {
+        normalized.description = normalized.note;
+      }
+      // Keep note as well since DTO now accepts it
+
+      // Provide a generated SKU if missing
+      if (!normalized.sku) {
+        normalized.sku = normalized.code || `SKU-${Date.now()}`;
+      }
+
+      // Convert supplierId to string (Core API uses UUID strings)
+      if ('supplierId' in normalized) {
+        if (normalized.supplierId === '' || normalized.supplierId === null || normalized.supplierId === 0) {
+          delete normalized.supplierId;
+        } else {
+          normalized.supplierId = String(normalized.supplierId);
+        }
+      }
+      
+      // Ensure numeric fields
+      const numericFields = ['thickness', 'lengthMm', 'widthMm', 'areaM2', 'minStock', 'costPrice', 'salePrice'];
+      numericFields.forEach(field => {
+        if (field in normalized && (normalized[field] === '' || normalized[field] === null)) {
+          normalized[field] = 0;
+        } else if (field in normalized) {
+          normalized[field] = Number(normalized[field]) || 0;
+        }
+      });
+    }
+
+    // Goods Receipts / Goods Issues - normalize lines
+    if (url.startsWith('/goods-receipts') || url.startsWith('/goods-issues')) {
+      // Ensure IDs are strings (UUID) not numbers
+      if ('supplierId' in normalized && normalized.supplierId) {
+        normalized.supplierId = String(normalized.supplierId);
+      }
+      if ('customerId' in normalized && normalized.customerId) {
+        normalized.customerId = String(normalized.customerId);
+      }
+      // Normalize lines: convert itemId, locationId to strings
+      if (Array.isArray(normalized.lines)) {
+        normalized.lines = normalized.lines.map((l: any) => {
+          const line = { ...l };
+          if (line.itemId) line.itemId = String(line.itemId);
+          if (line.locationId) line.locationId = String(line.locationId);
+          // Strip server-only fields from lines
+          delete line.id;
+          delete line.item;
+          delete line.location;
+          delete line.createdAt;
+          delete line.updatedAt;
+          return line;
+        });
+      }
+    }
+
+    // Processing Orders - fix ID types
+    if (url.startsWith('/processing-orders')) {
+      if ('customerId' in normalized && normalized.customerId) {
+        normalized.customerId = String(normalized.customerId);
+      }
+      if (Array.isArray(normalized.inputs)) {
+        normalized.inputs = normalized.inputs.map((i: any) => ({
+          ...i,
+          itemId: i.itemId ? String(i.itemId) : i.itemId,
+          locationId: i.locationId ? String(i.locationId) : i.locationId,
+        }));
+      }
+    }
+
+    // Damage Reports - fix ID types
+    if (url.startsWith('/damage-reports')) {
+      if ('itemId' in normalized) normalized.itemId = String(normalized.itemId);
+      if ('locationId' in normalized) normalized.locationId = String(normalized.locationId);
+    }
+
+    // Adjustments - fix lines
+    if (url.startsWith('/adjustments')) {
+      if (Array.isArray(normalized.lines)) {
+        normalized.lines = normalized.lines.map((l: any) => {
+          const line = { ...l };
+          if (line.itemId) line.itemId = String(line.itemId);
+          if (line.locationId) line.locationId = String(line.locationId);
+          delete line.id;
+          delete line.item;
+          delete line.location;
+          return line;
+        });
+      }
+    }
+
+    // Customers - strip code on POST (auto-generated)
+    if (url === '/customers') {
+      delete normalized.code;
+    }
+
+    return JSON.stringify(normalized);
+  } catch {
+    return body;
+  }
+}
+
 async function request<T>(url: string, options?: RequestInit): Promise<T> {
   // Alias /items to /products for Core API migration
   if (url.startsWith('/items')) {
@@ -128,7 +271,8 @@ async function request<T>(url: string, options?: RequestInit): Promise<T> {
     ...(options?.headers || {}),
   };
 
-  const res = await fetch(`${getApiBase(url)}${url}`, { ...options, headers });
+  const normalizedOptions = options ? { ...options, body: normalizeRequestBody(url, options.body) } : options;
+  const res = await fetch(`${getApiBase(url)}${url}`, { ...normalizedOptions, headers });
 
   if (res.status === 401) {
     if (useCoreApi(url)) {
