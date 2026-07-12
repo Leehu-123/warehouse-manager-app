@@ -30,7 +30,7 @@ export interface Item {
   minStock?: number;
   totalStock: number;
   availableStock: number;
-  supplierId?: number;
+  supplierId?: number | string;
   supplier?: Supplier;
   note?: string;
   active: boolean;
@@ -81,9 +81,9 @@ export interface Customer {
 
 export interface Inventory {
   id: number;
-  itemId: number;
+  itemId?: number | string;
   item?: Item;
-  locationId: number;
+  locationId?: number | string;
   location?: Location;
   quantity: number;
   totalAreaSqm?: number;
@@ -97,13 +97,13 @@ export interface Inventory {
 export interface StockMovement {
   id: number;
   type: 'nhap' | 'xuat' | 'chuyen' | 'dieu_chinh' | 'gia_cong_vao' | 'gia_cong_ra';
-  itemId: number;
+  itemId?: number | string;
   item?: Item;
-  locationId?: number;
+  locationId?: number | string;
   location?: Location;
   quantity: number;
   referenceType?: string;
-  referenceId?: number;
+  referenceId?: number | string;
   referenceCode?: string;
   notes?: string;
   createdBy: number;
@@ -116,7 +116,7 @@ export interface GoodsReceipt {
   code: string;
   sku?: string;
   date: string;
-  supplierId?: number;
+  supplierId?: number | string;
   supplier?: Supplier;
   deliveredBy?: string;
   vehicleNo?: string;
@@ -134,11 +134,11 @@ export interface GoodsReceipt {
 
 export interface GoodsReceiptLine {
   id: number;
-  receiptId: number;
-  itemId: number;
+  receiptId?: number | string;
+  itemId?: number | string;
   item?: Item;
   quantity: number;
-  locationId?: number;
+  locationId?: number | string;
   location?: Location;
   condition: string;
   note?: string;
@@ -150,7 +150,7 @@ export interface GoodsIssue {
   sku?: string;
   date: string;
   issueType: string;
-  customerId?: number;
+  customerId?: number | string;
   customer?: Customer;
   projectName?: string;
   requestedBy?: string;
@@ -170,12 +170,12 @@ export interface GoodsIssue {
 
 export interface GoodsIssueLine {
   id: number;
-  issueId: number;
-  itemId: number;
+  issueId?: number | string;
+  itemId?: number | string;
   item?: Item;
   requestedQty: number;
   actualQty?: number;
-  locationId?: number;
+  locationId?: number | string;
   location?: Location;
   condition: string;
   note?: string;
@@ -186,7 +186,7 @@ export interface ProcessingOrder {
   code: string;
   sku?: string;
   date: string;
-  customerId?: number;
+  customerId?: number | string;
   customer?: Customer;
   projectName?: string;
   requestedBy?: string;
@@ -208,10 +208,10 @@ export interface ProcessingOrder {
 
 export interface ProcessingInput {
   id: number;
-  processingOrderId: number;
-  itemId: number;
+  processingOrderId?: number | string;
+  itemId?: number | string;
   item?: Item;
-  locationId: number;
+  locationId?: number | string;
   location?: Location;
   quantity: number;
   areaM2?: number;
@@ -220,7 +220,7 @@ export interface ProcessingInput {
 
 export interface ProcessingOutput {
   id: number;
-  processingOrderId: number;
+  processingOrderId?: number | string;
   itemCode?: string;
   itemName: string;
   lengthMm?: number;
@@ -228,9 +228,9 @@ export interface ProcessingOutput {
   thickness?: number;
   quantity: number;
   areaM2?: number;
-  locationId?: number;
+  locationId?: number | string;
   location?: Location;
-  customerId?: number;
+  customerId?: number | string;
   customer?: Customer;
   projectName?: string;
   note?: string;
@@ -238,9 +238,9 @@ export interface ProcessingOutput {
 
 export interface ProcessingWaste {
   id: number;
-  processingOrderId: number;
+  processingOrderId?: number | string;
   wasteType: string;
-  itemId?: number;
+  itemId?: number | string;
   item?: Item;
   quantity?: number;
   areaM2?: number;
@@ -256,9 +256,9 @@ export interface DamageReport {
   date: string;
   reportedBy: number;
   reporter?: User;
-  itemId: number;
+  itemId?: number | string;
   item?: Item;
-  locationId: number;
+  locationId?: number | string;
   location?: Location;
   quantity: number;
   damageType: string;
@@ -292,10 +292,10 @@ export interface Stocktake {
 
 export interface StocktakeLine {
   id: number;
-  stocktakeId: number;
-  itemId: number;
+  stocktakeId?: number | string;
+  itemId?: number | string;
   item?: Item;
-  locationId?: number;
+  locationId?: number | string;
   location?: Location;
   systemQty: number;
   actualQty: number;
@@ -324,10 +324,10 @@ export interface StockAdjustment {
 
 export interface StockAdjustmentLine {
   id: number;
-  adjustmentId: number;
-  itemId: number;
+  adjustmentId?: number | string;
+  itemId?: number | string;
   item?: Item;
-  locationId?: number;
+  locationId?: number | string;
   location?: Location;
   qtyBefore: number;
   qtyAfter: number;
@@ -337,11 +337,12 @@ export interface StockAdjustmentLine {
 
 export interface AuditLog {
   id: number;
-  userId: number;
+  userId?: number | string;
   user?: User;
   action: string;
   entityType: string;
-  entityId: number;
+  entity?: string;
+  entityId?: number | string;
   changes?: string;
   ipAddress?: string;
   createdAt: string;
@@ -350,7 +351,8 @@ export interface AuditLog {
 export interface Attachment {
   id: number;
   entityType: string;
-  entityId: number;
+  entity?: string;
+  entityId?: number | string;
   fileName: string;
   filePath: string;
   fileSize: number;
@@ -392,12 +394,12 @@ export interface DashboardStats {
 }
 
 export interface LoginRequest {
-  username: string;
+  identifier: string;
   password: string;
 }
 
 export interface LoginResponse {
-  token: string;
+  accessToken: string;
   user: User;
 }
 

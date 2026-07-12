@@ -20,7 +20,7 @@ interface ItemFormData {
   unit: string;
   unitPrice: number | '';
   minStock: number | '';
-  supplierId: number | '';
+  supplierId: number | string | '';
   note: string;
   active: boolean;
 }
@@ -48,14 +48,15 @@ export default function ItemForm() {
 
   const loadSuppliers = async () => {
     try {
-      const res = await api.get<{ data: Supplier[] }>('/suppliers?limit=1000');
+      const res = await api.get<{ data: Supplier[] }>('/suppliers?limit=100');
       setSuppliers(res.data);
     } catch { /* empty */ }
   };
 
   const loadItem = async () => {
     try {
-      const item = await api.get<Item>(`/items/${id}`);
+      const res = await api.get<{data: Item}>(`/products/${id}`);
+      const item = res.data;
       setForm({
         code: item.code, name: item.name, glassType: item.glassType,
         thickness: item.thickness, color: item.color, size: item.standardSize || '',
@@ -134,14 +135,14 @@ export default function ItemForm() {
         areaM2: form.areaM2 ? Number(form.areaM2) : null,
         unitPrice: form.unitPrice ? Number(form.unitPrice) : null,
         minStock: form.minStock ? Number(form.minStock) : null,
-        supplierId: form.supplierId ? Number(form.supplierId) : null,
+        supplierId: form.supplierId || null,
         active: form.active,
       };
       if (isEdit) {
-        await api.put(`/items/${id}`, payload);
+        await api.put(`/products/${id}`, payload);
         toast.success('Cập nhật thành công!');
       } else {
-        await api.post('/items', payload);
+        await api.post('/products', payload);
         toast.success('Tạo hàng hóa thành công!');
       }
       navigate('/items');

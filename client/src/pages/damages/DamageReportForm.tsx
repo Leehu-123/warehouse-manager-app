@@ -31,7 +31,7 @@ export default function DamageReportForm() {
     const fetchReferences = async () => {
       try {
         const [itemsRes, locsRes] = await Promise.all([
-          api.get<{data: Item[]}>('/items?limit=1000'),
+          api.get<{data: Item[]}>('/products?limit=100'),
           api.get<{data: Location[]}>('/locations')
         ]);
         setItems(itemsRes.data);

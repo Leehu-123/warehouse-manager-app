@@ -15,8 +15,7 @@ export default function Dashboard() {
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const timestamp = new Date().getTime();
-        const res = await api.get<{ data: DashboardStats }>(`/inventory/stats?t=${timestamp}`);
+        const res = await api.get<{ data: DashboardStats }>('/inventory/stats');
         setStats(res.data);
       } catch (err) {
         console.error('Failed to load dashboard stats');

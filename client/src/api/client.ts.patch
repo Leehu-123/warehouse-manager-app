@@ -1,0 +1,17 @@
+--- client.ts.orig	2024-07-11
++++ client.ts	2024-07-11
+@@ -128,10 +128,9 @@
+   const res = await fetch(\\\\, { ...normalizedOptions, headers });
+ 
+   if (res.status === 401) {
+-    if (url === " /auth/me\) {
+- localStorage.removeItem('token');
+- localStorage.removeItem('user');
+- console.error(\401 Unauthorized for \, url);
+- window.location.href = '/login';
+- }
++ localStorage.removeItem('token');
++ localStorage.removeItem('user');
++ window.location.href = '/login';
+ throw new Error('Unauthorized');
+ }

@@ -32,8 +32,8 @@ export default function IssueForm() {
     try {
       const [custRes, itemsRes, locRes] = await Promise.all([
         api.get<{data: Customer[]}>('/customers?limit=100'),
-        api.get<{data: Item[]}>('/items?limit=500&isActive=true'),
-        api.get<{data: Location[]}>('/locations?limit=100&isActive=true')
+        api.get<{data: Item[]}>('/products?limit=100&active=true'),
+        api.get<{data: Location[]}>('/locations?limit=100&active=true')
       ]);
       setCustomers(custRes.data || []);
       setItems(itemsRes.data || []);
@@ -147,6 +147,19 @@ export default function IssueForm() {
     }
   };
 
+  const handleConfirm = async () => {
+    try {
+      setLoading(true);
+      await api.post(`/goods-issues/${id}/confirm`);
+      toast.success('Đã xác nhận xuất kho thành công');
+      navigate('/goods-issues');
+    } catch (err: any) {
+      toast.error(err.message || 'Lỗi khi xác nhận xuất kho');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleExportDoc = () => {
     if (!issue || !issue.code) return;
     const partner = customers.find(c => c.id === issue.customerId);
@@ -212,6 +225,11 @@ export default function IssueForm() {
               <CheckCircle className="w-4 h-4" /> Phê duyệt phiếu
             </button>
           )}
+          {issue?.status === 'da_duyet' && (
+            <button disabled={loading} onClick={handleConfirm} className="btn-primary flex items-center gap-2 bg-amber-600 hover:bg-amber-700">
+              <CheckCircle className="w-4 h-4" /> Xác nhận xuất kho
+            </button>
+          )}
         </div>
       </div>
 
@@ -237,7 +255,7 @@ export default function IssueForm() {
             <select
               disabled={!isEditable}
               value={issue.customerId || ''}
-              onChange={e => setIssue(p => ({ ...p, customerId: Number(e.target.value) }))}
+              onChange={e => setIssue(p => ({ ...p, customerId: e.target.value }))}
               className="input-field"
             >
               <option value="">-- Khách lẻ / Nội bộ --</option>
@@ -337,7 +355,7 @@ export default function IssueForm() {
                       <select
                         disabled={!isEditable}
                         value={line.itemId || ''}
-                        onChange={e => updateLine(index, 'itemId', Number(e.target.value))}
+                        onChange={e => updateLine(index, 'itemId', e.target.value)}
                         className="input-field py-1.5 px-2"
                       >
                         <option value="">-- Chọn --</option>
@@ -348,7 +366,7 @@ export default function IssueForm() {
                       <select
                         disabled={!isEditable}
                         value={line.locationId || ''}
-                        onChange={e => updateLine(index, 'locationId', Number(e.target.value))}
+                        onChange={e => updateLine(index, 'locationId', e.target.value)}
                         className="input-field py-1.5 px-2"
                       >
                         <option value="">-- Chọn --</option>

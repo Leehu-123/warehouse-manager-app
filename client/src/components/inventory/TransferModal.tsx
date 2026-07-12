@@ -51,9 +51,9 @@ export default function TransferModal({ isOpen, onClose, onSuccess, inventory }:
     setLoading(true);
     try {
       await api.post('/inventory/transfer', {
-        itemId: inventory.itemId,
-        fromLocationId: inventory.locationId,
-        toLocationId: parseInt(toLocationId),
+        productId: inventory.itemId || (inventory as any).productId,
+        fromLocationId: String(inventory.locationId),
+        toLocationId: String(toLocationId),
         quantity: qty,
         status: (inventory as any).condition || (inventory as any).status || 'tot',
         note: note || 'Chuyển vị trí nhanh qua hệ thống',

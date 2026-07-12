@@ -38,9 +38,9 @@ export default function ProcessingOrderForm() {
     const fetchReferences = async () => {
       try {
         const [itemsRes, locsRes, custsRes] = await Promise.all([
-          api.get<{data: Item[]}>('/items?limit=1000'),
+          api.get<{data: Item[]}>('/products?limit=100'),
           api.get<{data: Location[]}>('/locations'),
-          api.get<{data: Customer[]}>('/customers?limit=1000')
+          api.get<{data: Customer[]}>('/customers?limit=100')
         ]);
         setItems(itemsRes.data);
         setLocations(locsRes.data);

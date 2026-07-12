@@ -1,0 +1,19 @@
+version: '3.8'
+services:
+  web_app:
+    build: 
+      context: .
+      args:
+        - VITE_CORE_API_BASE=https://coreapi.ldhuy.name.vn
+    container_name: warehouse_manager_app
+    restart: always
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=postgresql://admin:secretpassword@postgres_db:5432/dafa_warehouse?schema=public
+    ports:
+      - "3002:3000"
+    networks:
+      - app_network
+networks:
+  app_network:
+    external: true

@@ -37,6 +37,18 @@ app.get('/health', (_req, res) => {
 // Global error handler
 app.use(errorHandler);
 
+// Serve frontend (client/dist) in production
+
+const clientDistPath = path.join(__dirname, "..", "..", "client", "dist");
+
+app.use(express.static(clientDistPath));
+
+app.get("*", (req, res) => {
+
+  res.sendFile(path.join(clientDistPath, "index.html"));
+
+});
+
 // Start server
 app.listen(PORT, () => {
   console.log(`🚀 DAFA Warehouse Server đang chạy tại http://localhost:${PORT}`);

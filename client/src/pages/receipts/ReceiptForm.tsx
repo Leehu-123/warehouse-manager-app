@@ -30,8 +30,8 @@ export default function ReceiptForm() {
     try {
       const [suppRes, itemsRes, locRes] = await Promise.all([
         api.get<{data: Supplier[]}>('/suppliers?limit=100'),
-        api.get<{data: Item[]}>('/items?limit=500&isActive=true'),
-        api.get<{data: Location[]}>('/locations?limit=100&isActive=true')
+        api.get<{data: Item[]}>('/products?limit=100&active=true'),
+        api.get<{data: Location[]}>('/locations?limit=100&active=true')
       ]);
       setSuppliers(suppRes.data || []);
       setItems(itemsRes.data || []);
@@ -146,6 +146,19 @@ export default function ReceiptForm() {
     }
   };
 
+  const handleConfirm = async () => {
+    try {
+      setLoading(true);
+      await api.post(`/goods-receipts/${id}/confirm`);
+      toast.success('Đã xác nhận nhập kho thành công');
+      navigate('/goods-receipts');
+    } catch (err: any) {
+      toast.error(err.message || 'Lỗi khi xác nhận nhập kho');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleExportDoc = () => {
     if (!receipt || !receipt.code) return;
     const partner = suppliers.find(s => s.id === receipt.supplierId);
@@ -211,6 +224,11 @@ export default function ReceiptForm() {
               <CheckCircle className="w-4 h-4" /> Phê duyệt phiếu
             </button>
           )}
+          {receipt?.status === 'da_duyet' && (
+            <button disabled={loading} onClick={handleConfirm} className="btn-primary flex items-center gap-2 bg-amber-600 hover:bg-amber-700">
+              <CheckCircle className="w-4 h-4" /> Xác nhận nhập kho
+            </button>
+          )}
         </div>
       </div>
 
@@ -225,7 +243,7 @@ export default function ReceiptForm() {
             <select
               disabled={!isEditable}
               value={receipt.supplierId || ''}
-              onChange={e => setReceipt(p => ({ ...p, supplierId: Number(e.target.value) }))}
+              onChange={e => setReceipt(p => ({ ...p, supplierId: e.target.value }))}
               className="input-field"
             >
               <option value="">-- Chọn nhà cung cấp --</option>
@@ -316,7 +334,7 @@ export default function ReceiptForm() {
                       <select
                         disabled={!isEditable}
                         value={line.itemId || ''}
-                        onChange={e => updateLine(index, 'itemId', Number(e.target.value))}
+                        onChange={e => updateLine(index, 'itemId', e.target.value)}
                         className="input-field py-1.5 px-2"
                       >
                         <option value="">-- Chọn --</option>
@@ -327,7 +345,7 @@ export default function ReceiptForm() {
                       <select
                         disabled={!isEditable}
                         value={line.locationId || ''}
-                        onChange={e => updateLine(index, 'locationId', Number(e.target.value))}
+                        onChange={e => updateLine(index, 'locationId', e.target.value)}
                         className="input-field py-1.5 px-2"
                       >
                         <option value="">-- Chọn --</option>

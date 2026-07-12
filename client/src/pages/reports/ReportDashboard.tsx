@@ -27,7 +27,6 @@ const ReportDashboard: React.FC = () => {
       const params = new URLSearchParams({
         startDate,
         endDate,
-        t: String(Date.now()),
       });
       const res = await api.get<{ data: XNTReportRow[] }>(`/reports/xnt?${params.toString()}`);
       setData(res.data);

@@ -7,25 +7,47 @@ import { vi } from 'date-fns/locale';
 
 const ACTION_LABELS: Record<string, string> = {
   create: 'Tạo mới',
+  CREATED: 'Tạo mới',
   update: 'Cập nhật',
+  UPDATED: 'Cập nhật',
   delete: 'Xóa',
+  DELETED: 'Xóa',
+  SOFT_DELETED: 'Xóa mềm',
   approve: 'Duyệt',
+  APPROVED: 'Duyệt',
   cancel: 'Hủy',
-  confirm: 'Xác nhận'
+  CANCELLED: 'Hủy',
+  confirm: 'Xác nhận',
+  SUBMITTED: 'Trình duyệt',
+  COMPLETED: 'Hoàn thành',
+  LOGIN_SUCCESS: 'Đăng nhập',
+  LOGIN_FAILED: 'Đăng nhập thất bại',
+  RESTORED: 'Khôi phục',
 };
 
 const ENTITY_LABELS: Record<string, string> = {
   goods_receipt: 'Phiếu nhập',
+  GoodsReceipt: 'Phiếu nhập',
   goods_issue: 'Phiếu xuất',
+  GoodsIssue: 'Phiếu xuất',
   processing_order: 'Lệnh gia công',
+  ProcessingOrder: 'Lệnh gia công',
   damage_report: 'Báo lỗi/vỡ',
+  DamageReport: 'Báo lỗi/vỡ',
   stocktake: 'Kiểm kê',
+  Stocktake: 'Kiểm kê',
   stock_adjustment: 'Điều chỉnh tồn',
+  Adjustment: 'Điều chỉnh tồn',
   item: 'Vật tư',
+  Product: 'Sản phẩm',
   location: 'Vị trí',
+  Location: 'Vị trí',
   customer: 'Khách hàng',
+  Customer: 'Khách hàng',
   supplier: 'Nhà cung cấp',
-  user: 'Người dùng'
+  Supplier: 'Nhà cung cấp',
+  user: 'Người dùng',
+  User: 'Người dùng',
 };
 
 const AuditLogList: React.FC = () => {
@@ -38,9 +60,7 @@ const AuditLogList: React.FC = () => {
 
   const fetchLogs = async () => {
     try {
-      // Could add pagination/filters here if needed
-      const timestamp = new Date().getTime();
-      const res = await api.get<{ data: AuditLog[] }>(`/audit-log?t=${timestamp}`);
+      const res = await api.get<{ data: AuditLog[] }>('/audit-logs');
       setLogs(res.data);
     } catch (error) {
       console.error('Failed to fetch audit logs', error);
@@ -57,7 +77,7 @@ const AuditLogList: React.FC = () => {
         {ACTION_LABELS[l.action] || l.action}
       </span>
     )},
-    { key: 'entity', label: 'Đối tượng', render: (l: AuditLog) => <span>{ENTITY_LABELS[l.entityType] || l.entityType}</span> },
+    { key: 'entity', label: 'Đối tượng', render: (l: AuditLog) => <span>{ENTITY_LABELS[l.entity!] || l.entity}</span> },
     { key: 'entityId', label: 'ID/Mã', render: (l: AuditLog) => <span className="font-mono text-sm">{l.entityId}</span> },
     { key: 'ip', label: 'IP', render: (l: AuditLog) => <span className="text-xs text-gray-500">{l.ipAddress || '-'}</span> },
   ];

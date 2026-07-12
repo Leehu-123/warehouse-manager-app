@@ -78,6 +78,7 @@ function normalizeResponse(url: string, payload: any) {
   const data = payload?.success && 'data' in payload ? payload.data : payload;
 
   if (url.startsWith('/auth/login')) {
+    if (!payload?.success) return response;
     const user = normalizeUser(data?.user);
     return {
       success: true,
@@ -97,7 +98,85 @@ function normalizeResponse(url: string, payload: any) {
     return { ...response, data: Array.isArray(data) ? data.map(normalizeUser) : normalizeUser(data) };
   }
 
-  if (url.startsWith('/products')) {
+      // Map response structures for Inventory and Documents
+    if (url.startsWith('/inventory') && !url.includes('/reports/')) {
+      if (Array.isArray(data)) {
+        return {
+          ...response,
+          data: data.map((item: any) => ({
+            ...item,
+            item: item.product,
+            itemId: item.productId,
+            product: undefined,
+            productId: undefined
+          }))
+        };
+      }
+      if (data && typeof data === 'object') {
+        if ('totalSKUs' in data || 'totalProducts' in data) {
+          return {
+            ...response,
+            data: {
+              totalItems: data.totalSKUs ?? data.totalProducts ?? 0,
+              totalStock: data.totalQuantity ?? 0,
+              totalAreaSqm: data.totalAreaM2 ?? 0,
+              pendingIssues: data.pendingIssues ?? 0,
+              pendingProcessing: data.pendingProcessing ?? 0,
+              finishedGoods: data.finishedProducts ?? 0,
+              damagedItems: data.damagedItems ?? 0,
+              lowStockAlerts: data.lowStockCount ?? 0,
+              pendingApprovals: {
+                receipts: data.pendingReceipts ?? 0,
+                issues: data.pendingIssues ?? 0,
+                processing: data.pendingProcessing ?? 0,
+                damages: 0,
+                adjustments: 0,
+              },
+              recentMovements: (data.recentMovements || []).map((m: any) => ({
+                ...m,
+                item: m.product || m.item,
+                creator: m.user || m.creator,
+              })),
+              stockByType: data.stockByType || [],
+              stockByCondition: data.stockByCondition || [],
+              lowStockItems: data.lowStockItems || data.lowStockProducts || [],
+            }
+          };
+        }
+      }
+    }
+
+    const docEndpoints = ['/goods-receipts', '/goods-issues', '/processing-orders', '/stocktakes', '/damage-reports', '/adjustments'];
+    if (docEndpoints.some(ep => url.startsWith(ep))) {
+      if (Array.isArray(data)) {
+        data.forEach((d: any) => {
+          if (Array.isArray(d.lines)) {
+            d.lines.forEach((l: any) => {
+              if (l.product) { l.item = l.product; l.itemId = l.productId; }
+            });
+          }
+        });
+      } else if (data && Array.isArray(data.lines)) {
+        data.lines.forEach((l: any) => {
+          if (l.product) { l.item = l.product; l.itemId = l.productId; }
+        });
+      }
+    }
+
+    // Normalize customer data
+    if (url.startsWith('/customers')) {
+      const normalizeCustomer = (c: any) => c ? { ...c, active: c.active ?? c.isActive ?? !c.deletedAt } : c;
+      const normalized = Array.isArray(data) ? data.map(normalizeCustomer) : normalizeCustomer(data);
+      return { ...response, data: normalized };
+    }
+
+    // Normalize supplier data
+    if (url.startsWith('/suppliers')) {
+      const normalized = Array.isArray(data) ? data.map(normalizeSupplier) : normalizeSupplier(data);
+      return { ...response, data: normalized };
+    }
+
+    if (url.startsWith('/products')) {
     const normalized = Array.isArray(data) ? data.map(normalizeItem) : normalizeItem(data);
     return { ...response, data: normalized };
   }
@@ -127,7 +206,7 @@ function normalizeRequestBody(url: string, body?: BodyInit | null): BodyInit | n
     // Strip server-only fields that should never be sent in POST/PUT requests
     const serverOnlyFields = ['id', 'createdAt', 'updatedAt', 'deletedAt', 'creator', 'approver',
       'createdBy', 'approvedBy', 'createdUser', 'supplier', 'customer', 'item', 'location',
-      'reporter', 'approverUser', 'creatorUser', 'companyId'];
+      'reporter', 'approverUser', 'creatorUser', 'companyId', 'createdById', 'updatedById'];
     serverOnlyFields.forEach(field => delete normalized[field]);
 
     // Core API uses isActive while the legacy Warehouse forms use active.
@@ -139,6 +218,24 @@ function normalizeRequestBody(url: string, body?: BodyInit | null): BodyInit | n
     // Core API auto-generates supplier codes; sending code fails whitelist validation.
     if (url.startsWith('/suppliers') && !url.includes('/suppliers/')) {
       delete normalized.code;
+    }
+
+    // Map User fields
+    if (url.startsWith('/users')) {
+      if ('username' in normalized && !('email' in normalized)) {
+        normalized.email = normalized.username;
+      }
+      if ('role' in normalized) {
+        normalized.roleNames = [normalized.role];
+        delete normalized.role;
+      }
+      // Core API CreateUserDto does not accept active/isActive
+      delete normalized.active;
+      delete normalized.isActive;
+      delete normalized.permissions;
+      delete normalized.roles;
+      delete normalized.lastLoginAt;
+      delete normalized.avatar;
     }
 
     // Map Item fields to Product fields
@@ -155,7 +252,7 @@ function normalizeRequestBody(url: string, body?: BodyInit | null): BodyInit | n
       }
       delete normalized.size;
 
-      // note → description mapping (Core API Product uses description, not note)
+      // note ΓåÆ description mapping (Core API Product uses description, not note)
       if ('note' in normalized && !('description' in normalized)) {
         normalized.description = normalized.note;
       }
@@ -186,6 +283,16 @@ function normalizeRequestBody(url: string, body?: BodyInit | null): BodyInit | n
       });
     }
 
+    // Strip code and status for document endpoints (backend manages these)
+    const docEndpoints = ['/goods-receipts', '/goods-issues', '/processing-orders', '/stocktakes', '/damage-reports', '/adjustments'];
+    if (docEndpoints.some(ep => url.startsWith(ep))) {
+      delete normalized.code;
+      delete normalized.status;
+      delete normalized.createdById;
+      delete normalized.approvedById;
+      delete normalized.updatedById;
+    }
+
     // Goods Receipts / Goods Issues - normalize lines
     if (url.startsWith('/goods-receipts') || url.startsWith('/goods-issues')) {
       // Ensure IDs are strings (UUID) not numbers
@@ -199,7 +306,7 @@ function normalizeRequestBody(url: string, body?: BodyInit | null): BodyInit | n
       if (Array.isArray(normalized.lines)) {
         normalized.lines = normalized.lines.map((l: any) => {
           const line = { ...l };
-          if (line.itemId) line.itemId = String(line.itemId);
+          if (line.itemId) { line.productId = String(line.itemId); delete line.itemId; }
           if (line.locationId) line.locationId = String(line.locationId);
           // Strip server-only fields from lines
           delete line.id;
@@ -218,17 +325,17 @@ function normalizeRequestBody(url: string, body?: BodyInit | null): BodyInit | n
         normalized.customerId = String(normalized.customerId);
       }
       if (Array.isArray(normalized.inputs)) {
-        normalized.inputs = normalized.inputs.map((i: any) => ({
-          ...i,
-          itemId: i.itemId ? String(i.itemId) : i.itemId,
-          locationId: i.locationId ? String(i.locationId) : i.locationId,
-        }));
+        normalized.inputs = normalized.inputs.map((i: any) => {
+          const res = { ...i, locationId: i.locationId ? String(i.locationId) : i.locationId };
+          if (res.itemId) { res.productId = String(res.itemId); delete res.itemId; }
+          return res;
+        });
       }
     }
 
     // Damage Reports - fix ID types
     if (url.startsWith('/damage-reports')) {
-      if ('itemId' in normalized) normalized.itemId = String(normalized.itemId);
+      if ('itemId' in normalized) { normalized.productId = String(normalized.itemId); delete normalized.itemId; }
       if ('locationId' in normalized) normalized.locationId = String(normalized.locationId);
     }
 
@@ -237,7 +344,7 @@ function normalizeRequestBody(url: string, body?: BodyInit | null): BodyInit | n
       if (Array.isArray(normalized.lines)) {
         normalized.lines = normalized.lines.map((l: any) => {
           const line = { ...l };
-          if (line.itemId) line.itemId = String(line.itemId);
+          if (line.itemId) { line.productId = String(line.itemId); delete line.itemId; }
           if (line.locationId) line.locationId = String(line.locationId);
           delete line.id;
           delete line.item;
@@ -253,13 +360,22 @@ function normalizeRequestBody(url: string, body?: BodyInit | null): BodyInit | n
     }
 
     return JSON.stringify(normalized);
+
   } catch {
     return body;
   }
 }
 
 async function request<T>(url: string, options?: RequestInit): Promise<T> {
+  if (url.startsWith('/dashboard')) {
+    url = url.replace('/dashboard', '/inventory/stats');
+  }
+
   // Alias /items to /products for Core API migration
+  if (url.startsWith('/reports/xnt')) {
+    url = url.replace('/reports/xnt', '/inventory/reports/xnt');
+  }
+
   if (url.startsWith('/items')) {
     url = url.replace('/items', '/products');
   }
@@ -275,17 +391,15 @@ async function request<T>(url: string, options?: RequestInit): Promise<T> {
   const res = await fetch(`${getApiBase(url)}${url}`, { ...normalizedOptions, headers });
 
   if (res.status === 401) {
-    if (useCoreApi(url)) {
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      window.location.href = '/login';
-    }
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    window.location.href = '/login';
     throw new Error('Unauthorized');
   }
 
   const data = await res.json().catch(() => null);
   if (!res.ok) {
-    const message = data?.error?.message || data?.error || data?.message || 'Có lỗi xảy ra';
+    const message = data?.error?.message || data?.error || data?.message || 'C├│ lß╗ùi xß║úy ra';
     throw new Error(message);
   }
   return normalizeResponse(url, data) as T;

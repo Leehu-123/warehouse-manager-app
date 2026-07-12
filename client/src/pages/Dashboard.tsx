@@ -55,8 +55,32 @@ export default function Dashboard() {
 
   const loadDashboard = async () => {
     try {
-      const res = await api.get<DashboardData>('/dashboard');
-      setData(res);
+      const res = await api.get<any>('/dashboard');
+      const d = res?.data || res;
+      setData({
+        totalItems: d.totalItems ?? d.totalSKUs ?? 0,
+        totalStock: d.totalStock ?? d.totalQuantity ?? 0,
+        totalAreaSqm: d.totalAreaSqm ?? d.totalAreaM2 ?? 0,
+        pendingIssues: d.pendingIssues ?? 0,
+        pendingProcessing: d.pendingProcessing ?? 0,
+        finishedGoods: d.finishedGoods ?? d.finishedProducts ?? 0,
+        damagedItems: d.damagedItems ?? 0,
+        lowStockAlerts: d.lowStockAlerts ?? d.lowStockCount ?? 0,
+        pendingApprovals: d.pendingApprovals ?? {
+          receipts: d.pendingReceipts ?? 0,
+          issues: d.pendingIssues ?? 0,
+          processing: d.pendingProcessing ?? 0,
+          damages: 0,
+          adjustments: 0,
+        },
+        recentMovements: (d.recentMovements || []).map((m: any) => ({
+          ...m,
+          item: m.product || m.item,
+          creator: m.user || m.creator,
+        })),
+        stockByType: d.stockByType || [],
+        stockByCondition: d.stockByCondition || [],
+      });
     } catch {
       // Use defaults if API not available
       setData({

@@ -35,7 +35,7 @@ export default function ItemList() {
       params.set('limit', String(limit));
       if (search) params.set('search', search);
       Object.entries(filters).forEach(([k, v]) => { if (v) params.set(k, v); });
-      const res = await api.get<PaginatedResponse<Item>>(`/items?${params}`);
+      const res = await api.get<PaginatedResponse<Item>>(`/products?${params}`);
       setData(res.data);
       setTotal(res.total);
     } catch {
@@ -51,10 +51,10 @@ export default function ItemList() {
     if (!deactivateItem) return;
     try {
       if (deactivateItem.active) {
-        await api.delete(`/items/${deactivateItem.id}`);
+        await api.delete(`/products/${deactivateItem.id}`);
       } else {
         // We might not have a way to restore soft-deleted items unless we do api.put
-        await api.put(`/items/${deactivateItem.id}`, { active: true });
+        await api.put(`/products/${deactivateItem.id}`, { active: true });
       }
       toast.success(deactivateItem.active ? 'Đã ngưng hoạt động' : 'Đã kích hoạt lại');
       loadData();
@@ -68,7 +68,7 @@ export default function ItemList() {
   const handleHardDelete = async () => {
     if (!deleteItem) return;
     try {
-      await api.delete(`/items/${deleteItem.id}/hard`);
+      await api.delete(`/products/${deleteItem.id}/hard`);
       toast.success('Đã xóa vĩnh viễn dữ liệu');
       loadData();
     } catch (err: any) {
