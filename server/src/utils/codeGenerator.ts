@@ -19,6 +19,10 @@ const COLOR_MAP: Record<string, string> = {
   den: 'DEN',
   nau: 'NAU',
   hong: 'HON',
+  xanh_la: 'XL',
+  xanh_dam: 'XDA',
+  trong_suot: 'TS',
+  trang_sua: 'TR',
 };
 
 function formatDate(date: Date): string {

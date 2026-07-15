@@ -455,6 +455,8 @@ export const COLOR_LABELS: Record<string, string> = {
   nau: 'Nâu',
   vang: 'Vàng',
   hong: 'Hồng',
+  tra: 'Màu trà',
+  xanh_dam: 'Xanh đậm',
   khac: 'Khác',
 };
 
