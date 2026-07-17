@@ -39,7 +39,7 @@ export default function ProcessingOrderList() {
       if (search) params.set('search', search);
       Object.entries(filters).forEach(([k, v]) => { if (v) params.set(k, v); });
 
-      const res = await api.get<PaginatedResponse<ProcessingOrder>>(`/processing-orders?${params}`);
+      const res: any = await api.get<PaginatedResponse<ProcessingOrder>>(`/processing-orders?${params}`);
       setData(res.data);
       setTotal(res.total);
     } catch {
@@ -51,8 +51,30 @@ export default function ProcessingOrderList() {
 
   useEffect(() => { loadData(); }, [loadData]);
 
-  const exportCSV = () => {
-    window.open(`/api/processing-orders/export?${new URLSearchParams(filters).toString()}`, '_blank');
+  const exportCSV = async () => {
+    try {
+      const allFilters = { ...filters, page: 1, limit: 100000 };
+      const params = new URLSearchParams(allFilters as any).toString();
+      const res: any = await api.get(`/processing-orders?${params}`);
+      const data = res.data || res.items || [];
+      if (!data.length) { alert('Không có dữ liệu để xuất'); return; }
+      const headers = ['Mã Lệnh', 'Ngày tạo', 'Ngày dự kiến', 'Loại gia công', 'Khách hàng', 'Dự án', 'Trạng thái', 'Ghi chú'];
+      const rows = data.map((item: any) => [
+         item.code || '',
+         new Date(item.date || item.createdAt).toLocaleDateString('vi-VN'),
+         item.expectedDate ? new Date(item.expectedDate).toLocaleDateString('vi-VN') : '',
+         item.type || '',
+         item.customer?.name || '',
+         item.projectName || '',
+         item.status || '',
+         item.note || ''
+      ].map(v => `"${v}"`));
+      const csvContent = [headers.join(','), ...rows.map((row: any) => row.join(','))].join('\n');
+      const blob = new Blob(['﻿' + csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href = url; a.download = 'processing_orders.csv';
+      document.body.appendChild(a); a.click(); document.body.removeChild(a); window.URL.revokeObjectURL(url);
+    } catch (e) { alert('Lỗi khi xuất file'); }
   };
 
   const handleHardDelete = async () => {

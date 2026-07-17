@@ -27,10 +27,13 @@ const UserForm: React.FC = () => {
 
   const fetchUser = async () => {
     try {
-      const res = await api.get<{ data: User[] }>(`/users`);
-      const found = res.data.find((u: User) => u.id === Number(id));
+      const res = await api.get<{ data: any[] }>(`/users`);
+      const found = res.data.find((u: any) => String(u.id) === String(id));
       if (found) {
-        setUser(found);
+        // Core API returns roles[] array, extract warehouse role
+        const warehouseRoles = ['admin', 'thukho', 'ketoan', 'viewer', 'warehouse', 'kinhdoanh', 'giacong'];
+        const role = (found.roles || []).find((r: string) => warehouseRoles.includes(r)) || found.role || 'viewer';
+        setUser({ ...found, role, active: found.isActive !== false && found.active !== false });
       }
     } catch (error) {
       toast.error('Lỗi khi tải thông tin người dùng');
@@ -124,6 +127,7 @@ const UserForm: React.FC = () => {
               <option value="thukho">Thủ kho</option>
               <option value="kinhdoanh">Kinh doanh</option>
               <option value="giacong">Xưởng gia công</option>
+              <option value="viewer">Người xem</option>
             </select>
           </div>
 

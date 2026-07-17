@@ -227,15 +227,21 @@ function normalizeRequestBody(url: string, body?: BodyInit | null): BodyInit | n
       }
       if ('role' in normalized) {
         normalized.roleNames = [normalized.role];
+        normalized.roleScope = 'warehouse';
         delete normalized.role;
       }
-      // Core API CreateUserDto does not accept active/isActive
-      delete normalized.active;
-      delete normalized.isActive;
-      delete normalized.permissions;
-      delete normalized.roles;
-      delete normalized.lastLoginAt;
-      delete normalized.avatar;
+      // Convert active to isActive for Core API
+      if ('active' in normalized) {
+        normalized.isActive = normalized.active;
+        delete normalized.active;
+      }
+      // Only keep fields allowed by CreateUserDto/UpdateUserDto
+      const allowedUserFields = ['teamId', 'email', 'username', 'password', 'fullName', 'phone', 'isActive', 'roleNames', 'roleScope'];
+      Object.keys(normalized).forEach(key => {
+        if (!allowedUserFields.includes(key)) {
+          delete normalized[key];
+        }
+      });
     }
 
     // Map Item fields to Product fields
@@ -309,11 +315,17 @@ function normalizeRequestBody(url: string, body?: BodyInit | null): BodyInit | n
           if (line.itemId) { line.productId = String(line.itemId); delete line.itemId; }
           if (line.locationId) line.locationId = String(line.locationId);
           // Strip server-only fields from lines
-          delete line.id;
-          delete line.item;
-          delete line.location;
-          delete line.createdAt;
-          delete line.updatedAt;
+          // Only keep allowed fields based on endpoint
+          const allowedLineFields = [
+            'productId', 'locationId', 'quantity', 'requestedQty', 'condition', 'note',
+            'systemQty', 'actualQty', 'reason', 'proposal', // stocktakes
+            'qtyBefore', 'qtyAfter' // adjustments
+          ];
+          Object.keys(line).forEach(key => {
+            if (!allowedLineFields.includes(key)) {
+              delete line[key];
+            }
+          });
           return line;
         });
       }
@@ -346,17 +358,83 @@ function normalizeRequestBody(url: string, body?: BodyInit | null): BodyInit | n
           const line = { ...l };
           if (line.itemId) { line.productId = String(line.itemId); delete line.itemId; }
           if (line.locationId) line.locationId = String(line.locationId);
-          delete line.id;
-          delete line.item;
-          delete line.location;
+          const allowedLineFields = ['productId', 'locationId', 'qtyBefore', 'qtyAfter', 'note'];
+          Object.keys(line).forEach(key => {
+            if (!allowedLineFields.includes(key)) {
+              delete line[key];
+            }
+          });
           return line;
         });
       }
     }
 
-    // Customers - strip code on POST (auto-generated)
-    if (url === '/customers') {
-      delete normalized.code;
+    
+    // Stocktakes - fix lines
+    if (url.startsWith('/stocktakes')) {
+      if (Array.isArray(normalized.lines)) {
+        normalized.lines = normalized.lines.map((l: any) => {
+          const line = { ...l };
+          if (line.itemId) { line.productId = String(line.itemId); delete line.itemId; }
+          if (line.locationId) line.locationId = String(line.locationId);
+          const allowedLineFields = ['productId', 'locationId', 'systemQty', 'actualQty', 'reason', 'proposal', 'note'];
+          Object.keys(line).forEach(key => {
+            if (!allowedLineFields.includes(key)) {
+              delete line[key];
+            }
+          });
+          return line;
+        });
+      }
+    }
+    
+    // Damage Reports - fix lines
+    if (url.startsWith('/damage-reports')) {
+      if (Array.isArray(normalized.lines)) {
+        normalized.lines = normalized.lines.map((l: any) => {
+          const line = { ...l };
+          if (line.itemId) { line.productId = String(line.itemId); delete line.itemId; }
+          if (line.locationId) line.locationId = String(line.locationId);
+          const allowedLineFields = ['productId', 'locationId', 'quantity', 'reason', 'note'];
+          Object.keys(line).forEach(key => {
+            if (!allowedLineFields.includes(key)) {
+              delete line[key];
+            }
+          });
+          return line;
+        });
+      }
+    }
+
+    // Customers
+    if (url.startsWith('/customers')) {
+      if (url === '/customers') delete normalized.code;
+      if ('active' in normalized) {
+        normalized.isActive = normalized.active;
+        delete normalized.active;
+      }
+    }
+
+    
+    // Root level whitelisting for documents to prevent Validation failed
+    if (url.startsWith('/goods-receipts')) {
+      const allowed = ['date', 'supplierId', 'deliveredBy', 'vehicleNo', 'receivedById', 'documentNo', 'note', 'lines'];
+      Object.keys(normalized).forEach(k => { if (!allowed.includes(k)) delete normalized[k]; });
+    } else if (url.startsWith('/goods-issues')) {
+      const allowed = ['date', 'issueType', 'customerId', 'projectName', 'requestedBy', 'receiverName', 'orderRef', 'vehicleNo', 'note', 'lines'];
+      Object.keys(normalized).forEach(k => { if (!allowed.includes(k)) delete normalized[k]; });
+    } else if (url.startsWith('/stocktakes')) {
+      const allowed = ['date', 'zone', 'note', 'lines'];
+      Object.keys(normalized).forEach(k => { if (!allowed.includes(k)) delete normalized[k]; });
+    } else if (url.startsWith('/adjustments')) {
+      const allowed = ['date', 'reason', 'note', 'lines'];
+      Object.keys(normalized).forEach(k => { if (!allowed.includes(k)) delete normalized[k]; });
+    } else if (url.startsWith('/damage-reports')) {
+      const allowed = ['date', 'reportedById', 'note', 'lines'];
+      Object.keys(normalized).forEach(k => { if (!allowed.includes(k)) delete normalized[k]; });
+    } else if (url.startsWith('/processing-orders')) {
+      const allowed = ['date', 'type', 'customerId', 'projectName', 'expectedDate', 'note', 'lines'];
+      Object.keys(normalized).forEach(k => { if (!allowed.includes(k)) delete normalized[k]; });
     }
 
     return JSON.stringify(normalized);
@@ -414,4 +492,21 @@ export const api = {
   patch: <T>(url: string, body?: unknown) =>
     request<T>(url, { method: 'PATCH', body: JSON.stringify(body) }),
   delete: <T>(url: string) => request<T>(url, { method: 'DELETE' }),
+  download: async (url: string, filename: string) => {
+    if (url.startsWith('/reports/xnt')) url = url.replace('/reports/xnt', '/inventory/reports/xnt');
+    if (url.startsWith('/items')) url = url.replace('/items', '/products');
+    const token = localStorage.getItem('token');
+    const headers: HeadersInit = { ...(token && { Authorization: `Bearer ${token}` }) };
+    const res = await fetch(`${getApiBase(url)}${url}`, { headers });
+    if (!res.ok) throw new Error('Download failed');
+    const blob = await res.blob();
+    const blobUrl = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = blobUrl;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(blobUrl);
+    document.body.removeChild(a);
+  },
 };

@@ -25,6 +25,7 @@ export default function CustomerList() {
   const [deleteItem, setDeleteItem] = useState<Customer | null>(null);
   const { user } = useAuth();
   const isAdmin = user?.role === 'admin';
+  const canEdit = user?.role !== 'viewer';
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -50,11 +51,7 @@ export default function CustomerList() {
   const handleToggleActive = async () => {
     if (!deactivateItem) return;
     try {
-      if (deactivateItem.active) {
-        await api.delete(`/customers/${deactivateItem.id}`);
-      } else {
-        await api.put(`/customers/${deactivateItem.id}`, { active: true });
-      }
+      await api.put(`/customers/${deactivateItem.id}`, { active: !deactivateItem.active });
       toast.success(deactivateItem.active ? 'Đã ngưng hoạt động' : 'Đã kích hoạt lại');
       loadData();
     } catch (err: unknown) {
@@ -94,12 +91,16 @@ export default function CustomerList() {
     )},
     { key: 'actions', label: '', render: (r) => (
       <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
-        <button onClick={() => navigate(`/customers/${r.id}/edit`)} className="btn-icon" title="Sửa">
-          <Edit2 className="w-4 h-4" />
-        </button>
-        <button onClick={() => setDeactivateItem(r)} className="btn-icon" title={r.active ? 'Ngưng' : 'Kích hoạt'}>
-          <Power className={`w-4 h-4 ${r.active ? 'text-red-500' : 'text-emerald-500'}`} />
-        </button>
+        {canEdit && (
+          <>
+            <button onClick={() => navigate(`/customers/${r.id}/edit`)} className="btn-icon" title="Sửa">
+              <Edit2 className="w-4 h-4" />
+            </button>
+            <button onClick={() => setDeactivateItem(r)} className="btn-icon" title={r.active ? 'Ngưng' : 'Kích hoạt'}>
+              <Power className={`w-4 h-4 ${r.active ? 'text-red-500' : 'text-emerald-500'}`} />
+            </button>
+          </>
+        )}
         {isAdmin && (
           <button onClick={() => setDeleteItem(r)} className="btn-icon hover:bg-red-50" title="Xóa vĩnh viễn">
             <Trash2 className="w-4 h-4 text-red-600" />
@@ -113,9 +114,9 @@ export default function CustomerList() {
     <div className="space-y-4 animate-fade-in">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <h1 className="page-title">Khách hàng</h1>
-        <button onClick={() => navigate('/customers/new')} className="btn-primary flex items-center gap-2">
+        {canEdit && (<button onClick={() => navigate('/customers/new')} className="btn-primary flex items-center gap-2">
           <Plus className="w-4 h-4" /> Thêm Khách hàng
-        </button>
+        </button>)}
       </div>
 
       <div className="space-y-3">

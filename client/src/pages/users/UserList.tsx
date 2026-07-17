@@ -10,7 +10,9 @@ const ROLE_LABELS: Record<string, string> = {
   ketoan: 'Kế toán',
   thukho: 'Thủ kho',
   kinhdoanh: 'Kinh doanh',
-  giacong: 'Gia công'
+  giacong: 'Gia công',
+  viewer: 'Người xem',
+  warehouse: 'Quản lý kho'
 };
 
 const UserList: React.FC = () => {
@@ -36,7 +38,11 @@ const UserList: React.FC = () => {
   const columns: Column<User>[] = [
     { key: 'username', label: 'Tài khoản', render: (u) => <span className="font-medium">{u.username}</span> },
     { key: 'fullName', label: 'Họ tên', render: (u) => <span>{u.fullName}</span> },
-    { key: 'role', label: 'Phân quyền', render: (u) => <span>{ROLE_LABELS[u.role] || u.role}</span> },
+    { key: 'role', label: 'Phân quyền', render: (u) => {
+      const warehouseRoles = ['admin', 'thukho', 'ketoan', 'viewer', 'warehouse', 'kinhdoanh', 'giacong'];
+      const role = ((u as any).roles || []).find((r: string) => warehouseRoles.includes(r)) || u.role || '';
+      return <span>{ROLE_LABELS[role] || role}</span>;
+    }},
     { key: 'active', label: 'Trạng thái', render: (u) => (
       <span className={`px-2 py-1 text-xs font-semibold rounded-full ${u.active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
         {u.active ? 'Hoạt động' : 'Đã khóa'}

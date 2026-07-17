@@ -24,8 +24,13 @@ export default function InventoryList() {
     glassType: searchParams.get('glassType') || '',
     color: searchParams.get('color') || '',
     condition: searchParams.get('condition') || '',
-    zone: searchParams.get('zone') || '',
+    locationId: searchParams.get('locationId') || '',
   });
+  
+  const [locations, setLocations] = useState<any[]>([]);
+  useEffect(() => {
+    api.get('/locations').then((res: any) => setLocations(res.data || res)).catch(() => {});
+  }, []);
   const [transferItem, setTransferItem] = useState<Inventory | null>(null);
 
   const loadData = useCallback(async () => {
@@ -37,7 +42,7 @@ export default function InventoryList() {
       if (search) params.set('search', search);
       Object.entries(filters).forEach(([k, v]) => { if (v) params.set(k, v); });
 
-      const res = await api.get<PaginatedResponse<Inventory>>(`/inventory?${params}`);
+      const res: any = await api.get<PaginatedResponse<Inventory>>(`/inventory?${params}`);
       setData(res.data);
       setTotal(res.total);
     } catch {
@@ -55,19 +60,52 @@ export default function InventoryList() {
   };
 
   const handleClearFilters = () => {
-    setFilters({ glassType: '', color: '', condition: '', zone: '' });
+    setFilters({ glassType: '', color: '', condition: '', locationId: '' });
     setPage(1);
   };
 
-  const exportCSV = () => {
-    window.open(`/api/inventory/export?${new URLSearchParams(filters).toString()}`, '_blank');
+  const exportCSV = async () => {
+    try {
+      const allFilters = { ...filters, page: 1, limit: 100000 };
+      const params = new URLSearchParams(allFilters as any).toString();
+      const res: any = await api.get(`/inventory?${params}`);
+      const exportData = res.data || res.items || res || [];
+      if (!Array.isArray(exportData) || !exportData.length) {
+        alert('Không có dữ liệu để xuất');
+        return;
+      }
+      const headers = ['Mã SP', 'Tên SP', 'Loại kính', 'Màu sắc', 'Độ dày (mm)', 'Kích thước (mm)', 'Vị trí', 'Số lượng', 'Tình trạng'];
+      const rows = exportData.map((item: any) => {
+         const p = item.item || item.product || {};
+         const loc = item.location || {};
+         return [
+           p.code || '',
+           p.name || '',
+           GLASS_TYPE_LABELS[p.glassType as keyof typeof GLASS_TYPE_LABELS] || p.glassType || '',
+           COLOR_LABELS[p.color as keyof typeof COLOR_LABELS] || p.color || '',
+           p.thickness || '',
+           `${p.lengthMm || 0}x${p.widthMm || 0}`,
+           loc.code || '',
+           item.quantity || 0,
+           CONDITION_LABELS[item.condition as keyof typeof CONDITION_LABELS] || item.condition || item.status || ''
+         ].map(v => `"${String(v).replace(/"/g, '""')}"`);
+      });
+      const csvContent = [headers.join(','), ...rows.map((row: any) => row.join(','))].join('\n');
+      const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href = url; a.download = 'inventory.csv';
+      document.body.appendChild(a); a.click(); document.body.removeChild(a); window.URL.revokeObjectURL(url);
+    } catch (e: any) { 
+      console.error('CSV Export Error:', e);
+      alert('Lỗi khi xuất file: ' + (e.message || 'Unknown error')); 
+    }
   };
 
   const filterOptions: FilterOption[] = [
     { key: 'glassType', label: 'Loại kính', options: Object.entries(GLASS_TYPE_LABELS).map(([v, l]) => ({ value: v, label: l })) },
     { key: 'color', label: 'Màu sắc', options: Object.entries(COLOR_LABELS).map(([v, l]) => ({ value: v, label: l })) },
     { key: 'condition', label: 'Tình trạng', options: Object.entries(CONDITION_LABELS).map(([v, l]) => ({ value: v, label: l })) },
-    { key: 'zone', label: 'Khu vực', options: Object.entries(ZONE_LABELS).map(([v, l]) => ({ value: v, label: l })) },
+    { key: 'locationId', label: 'Vị trí', options: locations.map(l => ({ value: String(l.id), label: l.code })) },
   ];
 
   const columns: Column<Inventory>[] = [
