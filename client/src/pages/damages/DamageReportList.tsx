@@ -53,10 +53,28 @@ export default function DamageReportList() {
 
   const exportCSV = async () => {
     try {
-      const allFilters = { ...filters, page: 1, limit: 100000 };
-      const params = new URLSearchParams(allFilters as any).toString();
-      const res: any = await api.get(`/damage-reports?${params}`);
-      const data = res.data || res.items || [];
+      let data: any[] = [];
+      let currentPage = 1;
+      const limit = 100;
+      while (true) {
+        const params = new URLSearchParams();
+        params.set('page', String(currentPage));
+        params.set('limit', String(limit));
+        if (typeof search !== 'undefined' && search) params.set('search', search);
+        Object.entries(filters).forEach(([k, v]) => { 
+          if (v) {
+             if (k === 'condition') params.set('status', v as string);
+             else params.set(k, v as string);
+          }
+        });
+        const queryString = params.toString();
+        const res: any = await api.get(`/damage-reports?${queryString}`);
+        const pageData = res.data || res.items || [];
+        if (!Array.isArray(pageData) || !pageData.length) break;
+        data = data.concat(pageData);
+        if (pageData.length < limit || (res.total && data.length >= res.total)) break;
+        currentPage++;
+      }
       if (!data.length) { alert('Không có dữ liệu để xuất'); return; }
       const headers = ['Mã Phiếu', 'Ngày báo cáo', 'Người báo cáo', 'Trạng thái', 'Ghi chú'];
       const rows = data.map((item: any) => [

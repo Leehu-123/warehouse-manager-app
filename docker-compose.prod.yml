@@ -1,11 +1,12 @@
 version: '3.8'
 services:
   web_app:
-    build: 
+    build:
       context: .
       args:
         - VITE_CORE_API_BASE=https://coreapi.ldhuy.name.vn
     container_name: warehouse_manager_app
+    image: ghcr.io/leehu-123/warehouse-manager-app:latest
     restart: always
     environment:
       - NODE_ENV=production

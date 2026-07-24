@@ -66,10 +66,28 @@ export default function InventoryList() {
 
   const exportCSV = async () => {
     try {
-      const allFilters = { ...filters, page: 1, limit: 100000 };
-      const params = new URLSearchParams(allFilters as any).toString();
-      const res: any = await api.get(`/inventory?${params}`);
-      const exportData = res.data || res.items || res || [];
+      let exportData: any[] = [];
+      let currentPage = 1;
+      const limit = 100;
+      while (true) {
+        const params = new URLSearchParams();
+        params.set('page', String(currentPage));
+        params.set('limit', String(limit));
+        if (typeof search !== 'undefined' && search) params.set('search', search);
+        Object.entries(filters).forEach(([k, v]) => { 
+          if (v) {
+             if (k === 'condition') params.set('status', v as string);
+             else params.set(k, v as string);
+          }
+        });
+        const queryString = params.toString();
+        const res: any = await api.get(`/inventory?${queryString}`);
+        const pageData = res.data || res.items || res || [];
+        if (!Array.isArray(pageData) || !pageData.length) break;
+        exportData = exportData.concat(pageData);
+        if (pageData.length < limit || (res.total && exportData.length >= res.total)) break;
+        currentPage++;
+      }
       if (!Array.isArray(exportData) || !exportData.length) {
         alert('Không có dữ liệu để xuất');
         return;
