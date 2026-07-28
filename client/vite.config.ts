@@ -6,10 +6,15 @@ export default defineConfig({
   server: {
     port: 5173,
     proxy: {
-      '/api': 'http://localhost:3001',
-      '/core-api': {
-        target: 'http://localhost:3003',
+      '/api': {
+        target: 'https://warehouse.ldhuy.name.vn',
         changeOrigin: true,
+        secure: false,
+      },
+      '/core-api': {
+        target: 'https://coreapi.ldhuy.name.vn',
+        changeOrigin: true,
+        secure: false,
         rewrite: (path) => path.replace(/^\/core-api/, ''),
       },
     }

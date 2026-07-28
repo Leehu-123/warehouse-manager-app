@@ -8,6 +8,7 @@ export interface User {
   role: 'admin' | 'ketoan' | 'thukho' | 'kinhdoanh' | 'giacong' | 'owner' | 'sales' | 'warehouse' | 'viewer' | string;
   roles?: string[];
   permissions?: string[];
+  telegramChatId?: string;
   active: boolean;
   createdAt: string;
   updatedAt: string;

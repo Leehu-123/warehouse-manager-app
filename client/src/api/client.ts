@@ -477,7 +477,16 @@ async function request<T>(url: string, options?: RequestInit): Promise<T> {
 
   const data = await res.json().catch(() => null);
   if (!res.ok) {
-    const message = data?.error?.message || data?.error || data?.message || 'C├│ lß╗ùi xß║úy ra';
+    if (res.status === 502 || res.status === 504) {
+      throw new Error('Không thể kết nối đến Core API server. Vui lòng kiểm tra server backend đã chạy chưa!');
+    }
+    let message = data?.error?.message || data?.message || data?.error || 'Có lỗi xảy ra khi kết nối tới server';
+    if (Array.isArray(message)) {
+      message = message.join(', ');
+    }
+    if (typeof message !== 'string') {
+      message = JSON.stringify(message);
+    }
     throw new Error(message);
   }
   return normalizeResponse(url, data) as T;

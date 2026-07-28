@@ -31,6 +31,7 @@ import UserList from './pages/users/UserList';
 import UserForm from './pages/users/UserForm';
 import AuditLogList from './pages/audit/AuditLogList';
 import ReportDashboard from './pages/reports/ReportDashboard';
+import ProfilePage from './pages/profile/ProfilePage';
 
 const ProtectedRoute = ({ children, roles }: { children: JSX.Element, roles?: string[] }) => {
   const { isAuthenticated, hasRole, user } = useAuth();
@@ -49,6 +50,7 @@ function App() {
       <Route path="/" element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
         <Route index element={<Navigate to="/dashboard" replace />} />
         <Route path="dashboard" element={<Dashboard />} />
+        <Route path="profile" element={<ProfilePage />} />
         
         {/* Kho hàng */}
         <Route path="inventory" element={<InventoryList />} />
