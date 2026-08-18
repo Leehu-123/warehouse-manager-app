@@ -1,4 +1,4 @@
-import { STATUS_LABELS } from '../../types';
+import { STATUS_LABELS, CONDITION_LABELS } from '../../types';
 
 interface StatusBadgeProps {
   status: string;
@@ -34,7 +34,7 @@ const colorMap: Record<string, string> = {
 
 export default function StatusBadge({ status, size = 'sm' }: StatusBadgeProps) {
   const colors = colorMap[status] || 'bg-surface-100 text-surface-700';
-  const label = STATUS_LABELS[status] || status;
+  const label = STATUS_LABELS[status] || CONDITION_LABELS[status] || status;
   const sizeClass = size === 'sm' ? 'px-2 py-0.5 text-xs' : 'px-3 py-1 text-sm';
 
   return (

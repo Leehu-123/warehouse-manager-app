@@ -105,7 +105,7 @@ export default function Dashboard() {
     { label: 'Hàng chờ xuất', value: data.pendingIssues, icon: <Truck className="w-6 h-6" />, color: 'text-amber-600 bg-amber-50', path: '/goods-issues?status=cho_xuat' },
     { label: 'Chờ gia công', value: data.pendingProcessing, icon: <Settings className="w-6 h-6" />, color: 'text-orange-600 bg-orange-50', path: '/processing' },
     { label: 'Thành phẩm', value: data.finishedGoods, icon: <CheckCircle className="w-6 h-6" />, color: 'text-emerald-600 bg-emerald-50', path: '/inventory?condition=thanh_pham' },
-    { label: 'Hàng lỗi/vỡ', value: data.damagedItems, icon: <AlertTriangle className="w-6 h-6" />, color: 'text-red-600 bg-red-50', path: '/damage-reports' },
+    { label: 'Hàng lỗi/vỡ', value: data.damagedItems, icon: <AlertTriangle className="w-6 h-6" />, color: 'text-red-600 bg-red-50', path: '/inventory?condition=loi_vo' },
     { label: 'Cảnh báo tồn thấp', value: data.lowStockAlerts, icon: <TrendingDown className="w-6 h-6" />, color: 'text-red-600 bg-red-50', path: '/inventory?lowStock=true' },
   ];
 

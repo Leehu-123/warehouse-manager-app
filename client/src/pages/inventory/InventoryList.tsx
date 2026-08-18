@@ -40,7 +40,12 @@ export default function InventoryList() {
       params.set('page', String(page));
       params.set('limit', String(limit));
       if (search) params.set('search', search);
-      Object.entries(filters).forEach(([k, v]) => { if (v) params.set(k, v); });
+      Object.entries(filters).forEach(([k, v]) => { 
+        if (v) {
+          if (k === 'condition') params.set('status', v as string);
+          else params.set(k, v as string);
+        }
+      });
 
       const res: any = await api.get<PaginatedResponse<Inventory>>(`/inventory?${params}`);
       setData(res.data);
@@ -147,8 +152,8 @@ export default function InventoryList() {
     { key: 'location', label: 'Vị trí', render: (r) => (
       <span className="badge bg-surface-100 text-surface-700">{r.location?.code || '-'}</span>
     )},
-    { key: 'condition', label: 'Tình trạng', render: (r) => <StatusBadge status={r.condition} /> },
-    { key: 'batch', label: 'Lô', render: (r) => <span className="text-xs text-surface-500">{r.batchNumber || '-'}</span> },
+    { key: 'condition', label: 'Tình trạng', render: (r: any) => <StatusBadge status={r.status || r.condition} /> },
+    { key: 'batch', label: 'Lô', render: (r: any) => <span className="text-xs text-surface-500">{r.batchNumber || r.batch || '-'}</span> },
     { key: 'actions', label: '', render: (r) => (
       <div className="flex justify-end pr-2">
         <button

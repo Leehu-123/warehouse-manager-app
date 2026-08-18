@@ -546,7 +546,7 @@ export const MOVEMENT_TYPE_LABELS: Record<string, string> = {
   gia_cong_ra: 'GC - Xuất',
 };
 
-export const CONDITION_LABELS: Record<string, string> = { tot: 'Tot', cho_kiem: 'Cho kiem', xuoc: 'Xuoc', me: 'Me', vo: 'Vo', khac: 'Khac' };
+export const CONDITION_LABELS: Record<string, string> = { tot: 'Tốt', cho_kiem: 'Chờ kiểm', xuoc: 'Xước', me: 'Mẻ', vo: 'Vỡ', khac: 'Khác', loi_vo: 'Hàng lỗi/vỡ' };
 export const PROCESSING_STATUS_LABELS: Record<string, string> = { nhap: 'Nhap', cho_duyet: 'Cho duyet', cho_vat_tu: 'Cho vat tu', dang_gia_cong: 'Dang gia cong', hoan_thanh: 'Hoan thanh', co_loi: 'Co loi', huy: 'Huy' };
 export const WASTE_TYPE_LABELS: Record<string, string> = { cat_quy_cach: 'Cat quy cach', vo_gia_cong: 'Vo', xuoc_me: 'Xuoc/me', sai_quy_cach: 'Sai quy cach', loi_vat_tu: 'Loi vat tu', loi_thao_tac: 'Loi thao tac', khac: 'Khac' };
 
