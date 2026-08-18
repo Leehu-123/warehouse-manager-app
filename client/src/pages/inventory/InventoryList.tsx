@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { toast } from 'react-hot-toast';
 import { Download, AlertTriangle } from 'lucide-react';
 import { api } from '../../api/client';
 import DataTable, { type Column } from '../../components/shared/DataTable';
@@ -34,8 +35,8 @@ export default function InventoryList() {
   const [transferItem, setTransferItem] = useState<Inventory | null>(null);
 
   const loadData = useCallback(async () => {
-    setLoading(true);
     try {
+      setLoading(true);
       const params = new URLSearchParams();
       params.set('page', String(page));
       params.set('limit', String(limit));
@@ -48,14 +49,25 @@ export default function InventoryList() {
       });
 
       const res: any = await api.get<PaginatedResponse<Inventory>>(`/inventory?${params}`);
-      setData(res.data);
-      setTotal(res.total);
-    } catch {
-      setData([]);
+      setData(res.data.data || res.data); // Support both structures
+      setTotal(res.data.meta?.totalItems || res.data.length || 0);
+    } catch (err) {
+      console.error('Failed to fetch inventory:', err);
+      toast.error('Lỗi khi tải danh sách tồn kho');
     } finally {
       setLoading(false);
     }
   }, [page, limit, search, filters]);
+
+  const handleStatusChange = async (id: number, newStatus: string) => {
+    try {
+      await api.post(`/inventory/${id}/status`, { status: newStatus });
+      toast.success('Đã cập nhật tình trạng');
+      loadData();
+    } catch (err: any) {
+      toast.error(err.message || 'Lỗi khi cập nhật tình trạng');
+    }
+  };
 
   useEffect(() => { loadData(); }, [loadData]);
 
@@ -152,7 +164,20 @@ export default function InventoryList() {
     { key: 'location', label: 'Vị trí', render: (r) => (
       <span className="badge bg-surface-100 text-surface-700">{r.location?.code || '-'}</span>
     )},
-    { key: 'condition', label: 'Tình trạng', render: (r: any) => <StatusBadge status={r.status || r.condition} /> },
+    { key: 'condition', label: 'Tình trạng', render: (r: any) => (
+      <div className="flex items-center gap-2">
+        <StatusBadge status={r.status || r.condition} />
+        <select 
+          className="text-xs bg-transparent border-none text-surface-400 hover:text-surface-600 focus:ring-0 cursor-pointer w-6 p-0"
+          value=""
+          onChange={(e) => { if (e.target.value) handleStatusChange(r.id, e.target.value); }}
+          title="Đổi tình trạng"
+        >
+          <option value="" disabled>✎</option>
+          {Object.entries(CONDITION_LABELS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+        </select>
+      </div>
+    ) },
     { key: 'batch', label: 'Lô', render: (r: any) => <span className="text-xs text-surface-500">{r.batchNumber || r.batch || '-'}</span> },
     { key: 'actions', label: '', render: (r) => (
       <div className="flex justify-end pr-2">
