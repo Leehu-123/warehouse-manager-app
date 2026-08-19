@@ -4,7 +4,8 @@ import { Save, ArrowLeft } from 'lucide-react';
 import { api } from '../../api/client';
 import LoadingSpinner from '../../components/shared/LoadingSpinner';
 import type { Item, Supplier } from '../../types';
-import { GLASS_TYPE_LABELS, COLOR_LABELS, UNIT_LABELS } from '../../types';
+import { GLASS_TYPE_LABELS, COLOR_LABELS, UNIT_LABELS, CONDITION_LABELS } from '../../types';
+import StatusBadge from '../../components/shared/StatusBadge';
 import toast from 'react-hot-toast';
 
 interface ItemFormData {
@@ -40,11 +41,37 @@ export default function ItemForm() {
   const [loading, setLoading] = useState(isEdit);
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [inventoryData, setInventoryData] = useState<any[]>([]);
 
   useEffect(() => {
     loadSuppliers();
-    if (isEdit) loadItem();
+    if (isEdit) {
+      loadItem();
+      loadInventory();
+    }
   }, [id]);
+
+  const loadInventory = async () => {
+    try {
+      const res: any = await api.get(`/inventory?search=&page=1&limit=100`);
+      const allInv = res.data?.data || res.data || [];
+      const filtered = allInv.filter((inv: any) => {
+        const productId = inv.productId || inv.item?.id || inv.product?.id;
+        return productId === id;
+      });
+      setInventoryData(filtered);
+    } catch { /* empty */ }
+  };
+
+  const handleInventoryStatusChange = async (invId: string, newStatus: string) => {
+    try {
+      await api.post(`/inventory/${invId}/status`, { status: newStatus });
+      toast.success('Đã cập nhật tình trạng');
+      loadInventory();
+    } catch (err: any) {
+      toast.error(err.message || 'Lỗi khi cập nhật tình trạng');
+    }
+  };
 
   const loadSuppliers = async () => {
     try {
@@ -293,6 +320,51 @@ export default function ItemForm() {
           </button>
         </div>
       </div>
+
+      {/* Inventory Status Section */}
+      {isEdit && inventoryData.length > 0 && (
+        <div className="card">
+          <div className="card-header">
+            <h2 className="text-lg font-semibold text-surface-900">Tồn kho & Tình trạng</h2>
+          </div>
+          <div className="p-0 overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-surface-50 border-b border-surface-200 text-surface-600 font-medium">
+                  <th className="px-4 py-3 text-left">Vị trí</th>
+                  <th className="px-4 py-3 text-center">Số lượng</th>
+                  <th className="px-4 py-3 text-left">Tình trạng hiện tại</th>
+                  <th className="px-4 py-3 text-left">Đổi tình trạng</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-surface-100">
+                {inventoryData.map((inv: any) => (
+                  <tr key={inv.id}>
+                    <td className="px-4 py-3">
+                      <span className="badge bg-surface-100 text-surface-700">{inv.location?.code || '-'}</span>
+                    </td>
+                    <td className="px-4 py-3 text-center font-semibold">{inv.quantity}</td>
+                    <td className="px-4 py-3">
+                      <StatusBadge status={inv.status || inv.condition} />
+                    </td>
+                    <td className="px-4 py-3">
+                      <select
+                        value={inv.status || inv.condition || ''}
+                        onChange={(e) => handleInventoryStatusChange(inv.id, e.target.value)}
+                        className="select-field py-1.5 px-2 text-sm w-40"
+                      >
+                        {Object.entries(CONDITION_LABELS)
+                          .filter(([key]) => key !== 'loi_vo')
+                          .map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+                      </select>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

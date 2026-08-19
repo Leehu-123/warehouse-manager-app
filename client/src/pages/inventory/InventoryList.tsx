@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
-import { Download, AlertTriangle } from 'lucide-react';
+import { Download, AlertTriangle, X } from 'lucide-react';
 import { api } from '../../api/client';
 import DataTable, { type Column } from '../../components/shared/DataTable';
 import SearchBar from '../../components/shared/SearchBar';
@@ -33,6 +33,9 @@ export default function InventoryList() {
     api.get('/locations').then((res: any) => setLocations(res.data || res)).catch(() => {});
   }, []);
   const [transferItem, setTransferItem] = useState<Inventory | null>(null);
+  
+  // Status change modal state
+  const [statusModal, setStatusModal] = useState<{ item: any; isOpen: boolean }>({ item: null, isOpen: false });
 
   const loadData = useCallback(async () => {
     try {
@@ -49,7 +52,7 @@ export default function InventoryList() {
       });
 
       const res: any = await api.get<PaginatedResponse<Inventory>>(`/inventory?${params}`);
-      setData(res.data.data || res.data); // Support both structures
+      setData(res.data.data || res.data);
       setTotal(res.data.meta?.totalItems || res.data.length || 0);
     } catch (err) {
       console.error('Failed to fetch inventory:', err);
@@ -59,10 +62,11 @@ export default function InventoryList() {
     }
   }, [page, limit, search, filters]);
 
-  const handleStatusChange = async (id: number, newStatus: string) => {
+  const handleStatusChange = async (id: string, newStatus: string) => {
     try {
       await api.post(`/inventory/${id}/status`, { status: newStatus });
       toast.success('Đã cập nhật tình trạng');
+      setStatusModal({ item: null, isOpen: false });
       loadData();
     } catch (err: any) {
       toast.error(err.message || 'Lỗi khi cập nhật tình trạng');
@@ -165,18 +169,14 @@ export default function InventoryList() {
       <span className="badge bg-surface-100 text-surface-700">{r.location?.code || '-'}</span>
     )},
     { key: 'condition', label: 'Tình trạng', render: (r: any) => (
-      <div className="flex items-center gap-2">
+      <button
+        onClick={(e) => { e.stopPropagation(); setStatusModal({ item: r, isOpen: true }); }}
+        className="inline-flex items-center gap-1.5 hover:opacity-80 transition-opacity"
+        title="Bấm để đổi tình trạng"
+      >
         <StatusBadge status={r.status || r.condition} />
-        <select 
-          className="text-xs bg-transparent border-none text-surface-400 hover:text-surface-600 focus:ring-0 cursor-pointer w-6 p-0"
-          value=""
-          onChange={(e) => { if (e.target.value) handleStatusChange(r.id, e.target.value); }}
-          title="Đổi tình trạng"
-        >
-          <option value="" disabled>✎</option>
-          {Object.entries(CONDITION_LABELS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
-        </select>
-      </div>
+        <span className="text-surface-400 text-xs">✎</span>
+      </button>
     ) },
     { key: 'batch', label: 'Lô', render: (r: any) => <span className="text-xs text-surface-500">{r.batchNumber || r.batch || '-'}</span> },
     { key: 'actions', label: '', render: (r) => (
@@ -239,6 +239,55 @@ export default function InventoryList() {
         onSuccess={loadData}
         inventory={transferItem}
       />
+
+      {/* Status Change Modal */}
+      {statusModal.isOpen && statusModal.item && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setStatusModal({ item: null, isOpen: false })}>
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-md mx-4 animate-fade-in" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-6 py-4 border-b border-surface-100">
+              <h3 className="text-lg font-semibold text-surface-900">Đổi tình trạng hàng hóa</h3>
+              <button onClick={() => setStatusModal({ item: null, isOpen: false })} className="p-1 rounded-md hover:bg-surface-100">
+                <X className="w-5 h-5 text-surface-500" />
+              </button>
+            </div>
+            <div className="px-6 py-4">
+              <div className="mb-4 p-3 bg-surface-50 rounded-lg">
+                <p className="text-sm text-surface-600">Mã hàng: <span className="font-semibold text-surface-900">{statusModal.item.item?.code || statusModal.item.product?.code}</span></p>
+                <p className="text-sm text-surface-600">Tên: <span className="font-medium">{statusModal.item.item?.name || statusModal.item.product?.name}</span></p>
+                <p className="text-sm text-surface-600">Vị trí: <span className="font-medium">{statusModal.item.location?.code || '-'}</span></p>
+                <p className="text-sm text-surface-600 mt-1">Tình trạng hiện tại: <StatusBadge status={statusModal.item.status || statusModal.item.condition} /></p>
+              </div>
+              <p className="text-sm font-medium text-surface-700 mb-3">Chọn tình trạng mới:</p>
+              <div className="grid grid-cols-2 gap-2">
+                {Object.entries(CONDITION_LABELS)
+                  .filter(([key]) => key !== 'loi_vo') // exclude alias
+                  .map(([value, label]) => {
+                  const currentStatus = statusModal.item.status || statusModal.item.condition;
+                  const isActive = currentStatus === value;
+                  return (
+                    <button
+                      key={value}
+                      onClick={() => !isActive && handleStatusChange(statusModal.item.id, value)}
+                      disabled={isActive}
+                      className={`px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                        isActive
+                          ? 'bg-brand-100 text-brand-700 border-2 border-brand-500 cursor-default'
+                          : 'bg-surface-50 text-surface-700 border border-surface-200 hover:bg-surface-100 hover:border-surface-300'
+                      }`}
+                    >
+                      {label}
+                      {isActive && ' ✓'}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+            <div className="px-6 py-3 border-t border-surface-100 flex justify-end">
+              <button onClick={() => setStatusModal({ item: null, isOpen: false })} className="btn-secondary text-sm">Đóng</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
