@@ -94,6 +94,7 @@ model Item {
   unit         String   // tam, m2, kien, bo
   unitPrice    Float    @default(0)
   minStock     Int      @default(0)
+  piecesPerPack Int?    @default(1) @map("pieces_per_pack")
   supplierId   Int?
   note         String?
   active       Boolean  @default(true)

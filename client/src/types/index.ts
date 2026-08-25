@@ -27,6 +27,7 @@ export interface Item {
   widthMm?: number;
   areaM2?: number;
   unit: string;
+  piecesPerPack?: number;
   unitPrice?: number;
   minStock?: number;
   totalStock: number;
@@ -463,11 +464,12 @@ export const COLOR_LABELS: Record<string, string> = {
 
 export const UNIT_LABELS: Record<string, string> = {
   tam: 'Tấm',
+  kien: 'Kiện',
   m2: 'm²',
   cai: 'Cái',
-  bo: 'Bộ',
   kg: 'kg',
   met: 'Mét',
+  bo: 'Kiện',
 };
 
 export const ZONE_LABELS: Record<string, string> = {

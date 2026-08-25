@@ -19,6 +19,7 @@ interface ItemFormData {
   widthMm: number | '';
   areaM2: number | '';
   unit: string;
+  piecesPerPack: number | '';
   unitPrice: number | '';
   minStock: number | '';
   supplierId: number | string | '';
@@ -28,7 +29,7 @@ interface ItemFormData {
 
 const initialForm: ItemFormData = {
   code: '', name: '', glassType: '', thickness: '', color: '', size: '',
-  lengthMm: '', widthMm: '', areaM2: '', unit: 'tam',
+  lengthMm: '', widthMm: '', areaM2: '', unit: 'tam', piecesPerPack: '',
   unitPrice: '', minStock: '', supplierId: '', note: '', active: true,
 };
 
@@ -89,6 +90,7 @@ export default function ItemForm() {
         thickness: item.thickness, color: item.color, size: item.standardSize || '',
         lengthMm: item.lengthMm || '', widthMm: item.widthMm || '',
         areaM2: item.areaM2 || '', unit: item.unit,
+        piecesPerPack: item.piecesPerPack || '',
         unitPrice: item.unitPrice || '', minStock: item.minStock || '',
         supplierId: item.supplierId || '', note: item.note || '',
         active: item.active !== false,
@@ -160,6 +162,7 @@ export default function ItemForm() {
         lengthMm: form.lengthMm ? Number(form.lengthMm) : null,
         widthMm: form.widthMm ? Number(form.widthMm) : null,
         areaM2: form.areaM2 ? Number(form.areaM2) : null,
+        piecesPerPack: form.piecesPerPack ? Number(form.piecesPerPack) : null,
         unitPrice: form.unitPrice ? Number(form.unitPrice) : null,
         minStock: form.minStock ? Number(form.minStock) : null,
         supplierId: form.supplierId || null,
@@ -260,14 +263,27 @@ export default function ItemForm() {
           </div>
 
           {/* Row 4 */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div>
               <label className="block text-sm font-medium text-surface-700 mb-1">
                 Đơn vị tính <span className="text-red-500">*</span>
               </label>
               <select value={form.unit} onChange={(e) => updateField('unit', e.target.value)} className={`select-field ${errors.unit ? 'border-red-400' : ''}`}>
-                {Object.entries(UNIT_LABELS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+                {Object.entries(UNIT_LABELS)
+                  .filter(([v]) => v !== 'bo')
+                  .map(([v, l]) => <option key={v} value={v}>{l}</option>)}
               </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-surface-700 mb-1">Số tấm/kiện</label>
+              <input
+                type="number"
+                min="1"
+                value={form.piecesPerPack}
+                onChange={(e) => updateField('piecesPerPack', e.target.value ? Number(e.target.value) : '')}
+                className="input-field"
+                placeholder="VD: 50"
+              />
             </div>
             <div>
               <label className="block text-sm font-medium text-surface-700 mb-1">Đơn giá (VNĐ)</label>

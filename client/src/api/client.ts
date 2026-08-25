@@ -50,6 +50,7 @@ function normalizeItem(item: any) {
     thickness: item.thickness ?? 0,
     color: item.color || 'trong',
     standardSize: item.standardSize || '-',
+    piecesPerPack: item.piecesPerPack ?? null,
     unitPrice: item.unitPrice ?? item.salePrice,
     totalStock: item.totalStock ?? 0,
     availableStock: item.availableStock ?? item.totalStock ?? 0,
@@ -279,7 +280,7 @@ function normalizeRequestBody(url: string, body?: BodyInit | null): BodyInit | n
       }
       
       // Ensure numeric fields
-      const numericFields = ['thickness', 'lengthMm', 'widthMm', 'areaM2', 'minStock', 'costPrice', 'salePrice'];
+      const numericFields = ['thickness', 'lengthMm', 'widthMm', 'areaM2', 'minStock', 'piecesPerPack', 'costPrice', 'salePrice'];
       numericFields.forEach(field => {
         if (field in normalized && (normalized[field] === '' || normalized[field] === null)) {
           normalized[field] = 0;
