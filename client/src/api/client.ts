@@ -20,6 +20,7 @@ const CORE_ROUTES = [
   '/stocktakes',
   '/damage-reports',
   '/adjustments',
+  '/orders',
 ];
 
 const useCoreApi = (url: string) => CORE_ROUTES.some((route) => url === route || url.startsWith(`${route}/`) || url.startsWith(`${route}?`));

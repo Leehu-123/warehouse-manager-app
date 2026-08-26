@@ -2,7 +2,7 @@ import { NavLink, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, Package, MapPin, FileInput, FileOutput, Settings,
   AlertTriangle, ClipboardList, SlidersHorizontal, Users, History,
-  Building2, UserCircle, BarChart3, ChevronLeft, X, Truck
+  Building2, UserCircle, BarChart3, ChevronLeft, X, Truck, ShoppingCart
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -45,6 +45,7 @@ const navGroups: NavGroup[] = [
     items: [
       { label: 'Phiếu nhập', path: '/goods-receipts', icon: <FileInput className="w-5 h-5" /> },
       { label: 'Phiếu xuất', path: '/goods-issues', icon: <FileOutput className="w-5 h-5" /> },
+      { label: 'Đơn hàng', path: '/sales-orders', icon: <ShoppingCart className="w-5 h-5" /> },
       { label: 'Hàng chờ xuất', path: '/goods-issues?status=cho_xuat', icon: <Truck className="w-5 h-5" /> },
     ],
   },

@@ -32,6 +32,8 @@ import UserForm from './pages/users/UserForm';
 import AuditLogList from './pages/audit/AuditLogList';
 import ReportDashboard from './pages/reports/ReportDashboard';
 import ProfilePage from './pages/profile/ProfilePage';
+import SalesOrderList from './pages/sales-orders/SalesOrderList';
+import SalesOrderDetailPage from './pages/sales-orders/SalesOrderDetail';
 
 const ProtectedRoute = ({ children, roles }: { children: JSX.Element, roles?: string[] }) => {
   const { isAuthenticated, hasRole, user } = useAuth();
@@ -66,6 +68,9 @@ function App() {
         <Route path="goods-issues" element={<IssueList />} />
         <Route path="goods-issues/new" element={<IssueForm />} />
         <Route path="goods-issues/:id/edit" element={<IssueForm />} />
+
+        <Route path="sales-orders" element={<SalesOrderList />} />
+        <Route path="sales-orders/:id" element={<SalesOrderDetailPage />} />
 
         {/* Danh mục đối tác / vị trí */}
         <Route path="locations" element={<LocationList />} />

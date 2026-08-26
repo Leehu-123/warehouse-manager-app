@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { ArrowLeft, Save, Send, Plus, Trash2, CheckCircle, FileText } from 'lucide-react';
 import { api } from '../../api/client';
 import toast from 'react-hot-toast';
@@ -13,6 +13,7 @@ import { ISSUE_TYPE_LABELS } from '../../types';
 export default function IssueForm() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const routeLocation = useLocation();
   const { hasRole } = useAuth();
   
   const [loading, setLoading] = useState(false);
@@ -60,6 +61,22 @@ export default function IssueForm() {
     loadDependencies();
     loadIssue();
   }, [loadDependencies, loadIssue]);
+
+  // Prefill from sales order (when navigating from SalesOrderDetail)
+  useEffect(() => {
+    const prefill = (routeLocation.state as any)?.prefill;
+    if (prefill && !id) {
+      setIssue(prev => ({
+        ...prev,
+        issueType: prefill.issueType || prev.issueType,
+        customerId: prefill.customerId || prev.customerId,
+        projectName: prefill.projectName || prev.projectName,
+        receiverName: prefill.receiverName || prev.receiverName,
+        note: prefill.note || prev.note,
+        lines: prefill.lines || prev.lines,
+      }));
+    }
+  }, [routeLocation.state, id]);
 
   const addLine = () => {
     setIssue(prev => ({
