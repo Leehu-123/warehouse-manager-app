@@ -42,6 +42,7 @@ interface SalesOrderDetail {
 }
 
 const STATUS_LABELS: Record<string, string> = {
+  NEW: 'Mới tạo',
   CONFIRMED: 'Đã xác nhận',
   DELIVERING: 'Đang giao',
   DEBT_TRACKING: 'Theo dõi công nợ',
@@ -49,6 +50,7 @@ const STATUS_LABELS: Record<string, string> = {
 };
 
 const STATUS_COLORS: Record<string, string> = {
+  NEW: 'bg-blue-100 text-blue-800',
   CONFIRMED: 'bg-emerald-100 text-emerald-800',
   DELIVERING: 'bg-amber-100 text-amber-800',
   DEBT_TRACKING: 'bg-purple-100 text-purple-800',
@@ -138,7 +140,7 @@ export default function SalesOrderDetailPage() {
           </div>
         </div>
 
-        {['CONFIRMED', 'DELIVERING'].includes(order.status) && (
+        {['NEW', 'CONFIRMED', 'DELIVERING'].includes(order.status) && (
           <button
             onClick={handleCreateGoodsIssue}
             className="btn-primary flex items-center gap-2 bg-amber-600 hover:bg-amber-700"
@@ -302,7 +304,7 @@ export default function SalesOrderDetailPage() {
         <button onClick={() => navigate('/sales-orders')} className="btn-secondary">
           ← Quay lại danh sách
         </button>
-        {['CONFIRMED', 'DELIVERING'].includes(order.status) && (
+        {['NEW', 'CONFIRMED', 'DELIVERING'].includes(order.status) && (
           <button
             onClick={handleCreateGoodsIssue}
             className="btn-primary flex items-center gap-2 bg-amber-600 hover:bg-amber-700"
